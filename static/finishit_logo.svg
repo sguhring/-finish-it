@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Dart and calculator logo">
+  <defs>
+    <style>
+      .stroke { stroke: #2e7d32; stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
+      .fill   { fill: #2e7d32; }
+      .bg     { fill: #ffffff; }
+      .muted  { stroke: #2e7d32; stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+    </style>
+  </defs>
+
+  <!-- Background (kept white so it works on your current page) -->
+  <rect x="0" y="0" width="512" height="512" class="bg"/>
+
+  <!-- Calculator body -->
+  <rect x="140" y="96" width="252" height="320" rx="34" class="stroke" fill="none"/>
+
+  <!-- Calculator screen -->
+  <rect x="172" y="128" width="188" height="68" rx="14" class="muted" fill="none"/>
+  <line x1="190" y1="162" x2="342" y2="162" class="muted"/>
+
+  <!-- Calculator buttons (3x3 + bottom row) -->
+  <g class="muted" fill="none">
+    <rect x="172" y="226" width="52" height="52" rx="12"/>
+    <rect x="240" y="226" width="52" height="52" rx="12"/>
+    <rect x="308" y="226" width="52" height="52" rx="12"/>
+
+    <rect x="172" y="292" width="52" height="52" rx="12"/>
+    <rect x="240" y="292" width="52" height="52" rx="12"/>
+    <rect x="308" y="292" width="52" height="52" rx="12"/>
+
+    <rect x="172" y="358" width="52" height="52" rx="12"/>
+    <rect x="240" y="358" width="52" height="52" rx="12"/>
+    <rect x="308" y="358" width="52" height="52" rx="12"/>
+  </g>
+
+  <!-- Dart (diagonal across calculator) -->
+  <!-- Shaft -->
+  <line x1="104" y1="408" x2="404" y2="108" class="stroke"/>
+
+  <!-- Tip -->
+  <path d="M 412 100 L 468 84 L 452 140 Z" class="fill"/>
+
+  <!-- Flight/fins -->
+  <path d="M 78 434 L 108 404 L 60 386 Z" class="fill" opacity="0.95"/>
+  <path d="M 108 404 L 138 374 L 90 356 Z" class="fill" opacity="0.8"/>
+
+  <!-- Small accent rings on shaft -->
+  <g class="muted">
+    <line x1="226" y1="286" x2="246" y2="266"/>
+    <line x1="266" y1="246" x2="286" y2="226"/>
+  </g>
+</svg>

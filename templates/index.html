@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% if current_score %}{{ current_score }} | {% endif %}Finish IT - Dart Outshot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Oswald:wght@700&family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            background: #111;
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: #111;
+            padding: 18px 20px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e1e1e;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3dbfa3;
+            flex-shrink: 0;
+        }
+        .header-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .header-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .header-rest-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #555;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .header-score {
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 900;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            color: #fff;
+        }
+        .header-score.placeholder { color: #333; }
+
+        /* ── Content wrapper ── */
+        .content {
+            padding: 16px 14px 40px;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ── Main card ── */
+        .main-card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 18px 16px 20px;
+            border: 1px solid #252525;
+            margin-bottom: 14px;
+        }
+
+        .card-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        /* ── OCR / Type toggle ── */
+        .ocr-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 0 16px;
+            font-family: inherit;
+        }
+        .ocr-toggle-icon {
+            font-size: 1.1rem;
+            color: #3dbfa3;
+            font-weight: 700;
+        }
+        .ocr-toggle-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #3dbfa3;
+        }
+
+        /* ── Score display ── */
+        .score-display {
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+            line-height: 1;
+            margin: 8px 0 20px;
+            letter-spacing: -1px;
+        }
+        .score-display.placeholder { color: #2a2a2a; }
+
+        /* ── Input row ── */
+        .input-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        input[type="number"] {
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 120px;
+            padding: 10px 14px;
+            border-radius: 50px;
+            border: 1.5px solid #2e2e2e;
+            background: #222;
+            color: #fff;
+            outline: none;
+            text-align: center;
+        }
+        input[type="number"]:focus {
+            border-color: #3dbfa3;
+            background: #1e1e1e;
+        }
+        input[type="number"]::placeholder { color: #444; }
+
+        /* ── Calculate button ── */
+        .calc-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 50px;
+            border: none;
+            background: #252525;
+            color: #555;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .calc-btn:hover, .calc-btn:focus { background: #3dbfa3; color: #fff; }
+        .calc-btn.active { background: #3dbfa3; color: #fff; }
+
+        /* ── OCR button ── */
+        .ocr-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 50px;
+            border: 1.5px solid #2a3d35;
+            background: #1a1a1a;
+            color: #3dbfa3;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .ocr-btn:hover, .ocr-btn.running { background: #3dbfa3; color: #fff; }
+        .ocr-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+        .ocr-btn.running .ocr-dot { animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* ── Field switcher ── */
+        .field-switcher {
+            display: flex;
+            gap: 3px;
+            margin-top: 8px;
+        }
+        .field-btn {
+            flex: 1;
+            padding: 2px 4px 4px;
+            border-radius: 10px;
+            border: 1.5px solid #2a2a2a;
+            background: #1e1e1e;
+            color: #555;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+        }
+        .field-btn .field-label {
+            font-size: 0.5rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            opacity: 0.65;
+        }
+        .field-btn .field-num {
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+        }
+        .field-btn.active { border-color: #3dbfa3; background: #162e27; color: #3dbfa3; }
+        .field-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* ── Finishes table link ── */
+        .table-link {
+            display: block;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #3dbfa3;
+            text-decoration: none;
+        }
+        .table-link:hover { text-decoration: underline; }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding: 0 4px;
+        }
+
+        /* ── Results card ── */
+        .results-card {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 16px 14px;
+            border: 1px solid #252525;
+            margin-bottom: 14px;
+        }
+
+        /* ── Ways grid ── */
+        .ways-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* ── Single finish row ── */
+        .finish-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 16px;
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            min-height: 58px;
+        }
+        .finish-row.is-suggested {
+            border-color: #2a3d35;
+            background: #1a2820;
+        }
+        .finish-row .row-num {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #444;
+            min-width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .finish-row .darts {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .finish-row .dart {
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            font-size: 2.55rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: -0.02em;
+        }
+        .finish-row .dart-double {
+            color: #3dbfa3;
+        }
+        .finish-row .dart-sep {
+            font-size: 0.9rem;
+            color: #444;
+            margin: 0 2px;
+            line-height: 1;
+        }
+        .best-badge {
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #3dbfa3;
+            border: 1.5px solid #2a3d35;
+            background: #162e27;
+            border-radius: 6px;
+            padding: 3px 7px;
+            flex-shrink: 0;
+        }
+
+        /* ── No outshot ── */
+        .no-way {
+            text-align: center;
+            color: #444;
+            font-style: italic;
+            font-size: 0.88rem;
+            padding: 6px 0;
+        }
+
+        /* ── Error message ── */
+        .message-box {
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e05555;
+            padding: 8px 0 4px;
+        }
+
+        /* ── Live OCR Section ── */
+        #liveSection {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 16px 14px;
+            border: 1px solid #252525;
+            margin-bottom: 14px;
+            display: none;
+        }
+        #liveSection.active { display: block; }
+        #liveSection h3 {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        #liveScore {
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #fff;
+        }
+        #liveWays { margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="header-dot"></div>
+            <span class="header-title">Finish IT</span>
+        </div>
+        <div class="header-right">
+            <span class="header-rest-label">Rest</span>
+            <div class="header-score {% if not current_score %}placeholder{% endif %}" id="headerScore">
+                {{ current_score if current_score else '—' }}
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- Live OCR Section -->
+        <div id="liveSection">
+            <h3>Live Score (OCR)</h3>
+            <div>Score: <span id="liveScore">—</span></div>
+            <div id="liveMsg"></div>
+            <div id="liveWays" class="ways-grid"></div>
+        </div>
+
+        <!-- Main input card -->
+        <div class="main-card">
+            <div class="card-label">Outshot Calculator</div>
+
+            <!-- OCR Toggle -->
+            <button type="button" class="ocr-toggle" id="ocrToggleBtn">
+                <span class="ocr-toggle-icon">&#8800;</span>
+                <span class="ocr-toggle-text" id="ocrToggleText">Type in Rest</span>
+            </button>
+
+            <!-- Score display -->
+            {% set current_score = request.form.get('input_value', '') %}
+            <div class="score-display {% if not current_score %}placeholder{% endif %}" id="scoreDisplay">
+                {{ current_score if current_score else '---' }}
+            </div>
+
+            <!-- Input form -->
+            <form method="POST" id="mainForm">
+                <div class="input-row">
+                    <input type="number" name="input_value" id="input_value"
+                           placeholder="Score" min="2" max="170"
+                           value="{{ current_score }}" required>
+                </div>
+                <button type="submit" class="calc-btn {% if current_score %}active{% endif %}" id="calcBtn">
+                    Calculate
+                </button>
+                <button type="button" class="ocr-btn" id="ocrBtn">
+                    <span class="ocr-dot"></span>
+                    <span id="ocrBtnText">Start OCR</span>
+                </button>
+                <div class="field-switcher">
+                    <button type="button" class="field-btn active" id="fieldBtn1" onclick="setField(1)"><span class="field-label">Field</span><span class="field-num">1</span></button>
+                    <button type="button" class="field-btn" id="fieldBtn2" onclick="setField(2)"><span class="field-label">Field</span><span class="field-num">2</span></button>
+                </div>
+            </form>
+
+            {% if print_solution_message %}
+                <div class="message-box">{{ print_solution_message }}</div>
+            {% endif %}
+
+            <a href="/finishes" class="table-link">View all finishes 2–170 →</a>
+        </div>
+
+        <!-- Suggested ways -->
+        {% if suggested_ways is not none and suggested_ways|length > 0 %}
+        <div class="results-card">
+            <div class="section-label">Suggested Outshots</div>
+            <div class="ways-grid">
+                {% for item in suggested_ways %}
+                <div class="finish-row is-suggested">
+                    <span class="row-num">{{ loop.index }}</span>
+                    <div class="darts">
+                        {% if item is sequence and item is not string %}
+                            {% set darts = item|reject('equalto', 'NA')|list %}
+                            {% for dart in darts %}
+                                {% if not loop.first %}<span class="dart-sep">›</span>{% endif %}
+                                {% if loop.last %}<span class="dart dart-double">{{ dart }}</span>{% else %}<span class="dart">{{ dart }}</span>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="dart">{{ item }}</span>
+                        {% endif %}
+                    </div>
+                    {% if loop.first %}<span class="best-badge">Best</span>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Alternatives -->
+        {% if preferred_ways is not none and preferred_ways|length > 0 %}
+        <div class="results-card">
+            <div class="section-label">Alternatives</div>
+            <div class="ways-grid">
+                {% for item in preferred_ways %}
+                <div class="finish-row">
+                    <span class="row-num">{{ loop.index }}</span>
+                    <div class="darts">
+                        {% if item is sequence and item is not string %}
+                            {% set darts = item|reject('equalto', 'NA')|list %}
+                            {% for dart in darts %}
+                                {% if not loop.first %}<span class="dart-sep">›</span>{% endif %}
+                                {% if loop.last %}<span class="dart dart-double">{{ dart }}</span>{% else %}<span class="dart">{{ dart }}</span>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="dart">{{ item }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- All ways (calculate_output result) -->
+        {% if output_value is not none and output_value|length > 0 %}
+        <div class="results-card">
+            <div class="section-label">All Ways</div>
+            <div class="ways-grid">
+                {% for item in output_value %}
+                <div class="finish-row">
+                    <span class="row-num">{{ loop.index }}</span>
+                    <div class="darts">
+                        {% if item is sequence and item is not string %}
+                            {% set darts = item|reject('equalto', 'NA')|list %}
+                            {% for dart in darts %}
+                                {% if not loop.first %}<span class="dart-sep">›</span>{% endif %}
+                                {% if loop.last %}<span class="dart dart-double">{{ dart }}</span>{% else %}<span class="dart">{{ dart }}</span>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="dart">{{ item }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- NA Double Double -->
+        {% if na_double_double_finishes is not none and na_double_double_finishes|length > 0 %}
+        <div class="results-card">
+            <div class="section-label">NA Double Double</div>
+            <div class="ways-grid">
+                {% for item in na_double_double_finishes %}
+                <div class="finish-row">
+                    <span class="row-num">{{ loop.index }}</span>
+                    <div class="darts">
+                        {% if item is sequence and item is not string %}
+                            {% set darts = item|reject('equalto', 'NA')|list %}
+                            {% for dart in darts %}
+                                {% if not loop.first %}<span class="dart-sep">›</span>{% endif %}
+                                {% if loop.last %}<span class="dart dart-double">{{ dart }}</span>{% else %}<span class="dart">{{ dart }}</span>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="dart">{{ item }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Single Double Double -->
+        {% if single_double_double_finishes is not none and single_double_double_finishes|length > 0 %}
+        <div class="results-card">
+            <div class="section-label">Single Double Double</div>
+            <div class="ways-grid">
+                {% for item in single_double_double_finishes %}
+                <div class="finish-row">
+                    <span class="row-num">{{ loop.index }}</span>
+                    <div class="darts">
+                        {% if item is sequence and item is not string %}
+                            {% set darts = item|reject('equalto', 'NA')|list %}
+                            {% for dart in darts %}
+                                {% if not loop.first %}<span class="dart-sep">›</span>{% endif %}
+                                {% if loop.last %}<span class="dart dart-double">{{ dart }}</span>{% else %}<span class="dart">{{ dart }}</span>{% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="dart">{{ item }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div><!-- /content -->
+
+    <script>
+    let lastSubmittedScore = null;
+    let ocrTimerId = null;
+
+    function updateTitle(score) {
+        document.title = score ? score + " | Finish IT - Dart Outshot" : "Finish IT - Dart Outshot";
+    }
+
+    const inputField = document.getElementById("input_value");
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const headerScore = document.getElementById("headerScore");
+    const calcBtn = document.getElementById("calcBtn");
+
+    if (inputField) {
+        inputField.addEventListener("input", () => {
+            const val = inputField.value.trim();
+            if (val) {
+                scoreDisplay.textContent = val;
+                scoreDisplay.classList.remove("placeholder");
+                if (headerScore) {
+                    headerScore.textContent = val;
+                    headerScore.classList.remove("placeholder");
+                }
+                calcBtn.classList.add("active");
+                updateTitle(val);
+            } else {
+                scoreDisplay.textContent = "---";
+                scoreDisplay.classList.add("placeholder");
+                if (headerScore) {
+                    headerScore.textContent = "—";
+                    headerScore.classList.add("placeholder");
+                }
+                calcBtn.classList.remove("active");
+                updateTitle(null);
+            }
+        });
+    }
+
+    function isOcrEnabled() {
+        const v = localStorage.getItem("ocrEnabled");
+        if (v === null) return false;
+        return v === "1";
+    }
+
+    function setOcrEnabled(enabled) {
+        localStorage.setItem("ocrEnabled", enabled ? "1" : "0");
+    }
+
+    function updateOcrButtonLabel() {
+        const toggleText = document.getElementById("ocrToggleText");
+        const toggleIcon = document.querySelector(".ocr-toggle-icon");
+        const ocrBtnText = document.getElementById("ocrBtnText");
+        const ocrBtn = document.getElementById("ocrBtn");
+
+        if (isOcrEnabled()) {
+            if (toggleText) toggleText.textContent = "Stop OCR";
+            if (toggleIcon) toggleIcon.textContent = "◉";
+            if (ocrBtnText) ocrBtnText.textContent = "Stop OCR";
+            if (ocrBtn) ocrBtn.classList.add("running");
+        } else {
+            if (toggleText) toggleText.textContent = "Type in Rest";
+            if (toggleIcon) toggleIcon.innerHTML = "&#8800;";
+            if (ocrBtnText) ocrBtnText.textContent = "Start OCR";
+            if (ocrBtn) ocrBtn.classList.remove("running");
+        }
+    }
+
+    function stopOcr() {
+        if (ocrTimerId !== null) {
+            clearInterval(ocrTimerId);
+            ocrTimerId = null;
+        }
+        const liveSection = document.getElementById("liveSection");
+        if (liveSection) liveSection.classList.remove("active");
+    }
+
+    function startOcr() {
+        if (ocrTimerId !== null) return;
+        refreshOutshot();
+        ocrTimerId = setInterval(refreshOutshot, 700);
+    }
+
+    function toggleOcr() {
+        const next = !isOcrEnabled();
+        setOcrEnabled(next);
+        updateOcrButtonLabel();
+        if (next) startOcr();
+        else stopOcr();
+    }
+
+    function initOcrControls() {
+        if (localStorage.getItem("ocrEnabled") === null) {
+            setOcrEnabled(false);
+        }
+
+        const toggleBtn = document.getElementById("ocrToggleBtn");
+        if (toggleBtn) toggleBtn.onclick = toggleOcr;
+
+        const ocrBtn = document.getElementById("ocrBtn");
+        if (ocrBtn) ocrBtn.onclick = toggleOcr;
+
+        updateOcrButtonLabel();
+        if (isOcrEnabled()) startOcr();
+        else stopOcr();
+    }
+
+    initOcrControls();
+
+    function updateFieldButtons(activeField) {
+        document.getElementById("fieldBtn1").classList.toggle("active", activeField === 1);
+        document.getElementById("fieldBtn2").classList.toggle("active", activeField === 2);
+    }
+
+    async function setField(field) {
+        const btn = document.getElementById("fieldBtn" + field);
+        if (btn) btn.disabled = true;
+        try {
+            const res = await fetch("/api/set_field", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ field })
+            });
+            const data = await res.json();
+            if (data.ok) updateFieldButtons(data.field);
+        } catch (e) {
+            console.log("setField error", e);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    fetch("/api/current_field").then(r => r.json()).then(d => updateFieldButtons(d.field)).catch(() => {});
+
+    async function submitScore(score) {
+        try {
+            const formData = new FormData();
+            formData.append('input_value', score);
+            const res = await fetch("/", { method: 'POST', body: formData });
+            if (res.ok) {
+                const html = await res.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+                document.body.innerHTML = newDoc.body.innerHTML;
+                lastSubmittedScore = score;
+                initOcrControls();
+            }
+        } catch (e) {
+            console.log("submitScore error", e);
+        }
+    }
+
+    async function refreshOutshot() {
+        if (!isOcrEnabled()) return;
+        try {
+            const res = await fetch("/api/outshot");
+            const data = await res.json();
+            const liveSection = document.getElementById("liveSection");
+
+            if (data.ok) {
+                liveSection.classList.add("active");
+                document.getElementById("liveScore").textContent = data.score ?? "—";
+                document.getElementById("liveMsg").textContent = data.message ?? "";
+                updateTitle(data.score);
+
+                if (data.score !== lastSubmittedScore && data.score !== null) {
+                    const inp = document.getElementById("input_value");
+                    if (inp) inp.value = data.score;
+                    submitScore(data.score);
+                    return;
+                }
+
+                const container = document.getElementById("liveWays");
+                container.innerHTML = "";
+
+                if (Array.isArray(data.suggested_ways) && data.suggested_ways.length > 0) {
+                    data.suggested_ways.forEach(row => {
+                        const div = document.createElement("div");
+                        div.classList.add("finish-row", "is-suggested");
+                        const darts = Array.isArray(row) ? row.filter(t => t !== "NA") : (row !== "NA" ? [row] : []);
+                        darts.forEach((throwLabel, i) => {
+                            if (i > 0) {
+                                const sep = document.createElement("span");
+                                sep.classList.add("dart-sep");
+                                sep.textContent = "›";
+                                div.appendChild(sep);
+                            }
+                            const span = document.createElement("span");
+                            span.classList.add("dart");
+                            if (i === darts.length - 1) span.classList.add("dart-double");
+                            span.textContent = throwLabel;
+                            div.appendChild(span);
+                        });
+                        container.appendChild(div);
+                    });
+                }
+            } else {
+                liveSection.classList.remove("active");
+            }
+        } catch (e) {
+            console.log("refreshOutshot error", e);
+        }
+    }
+    </script>
+</body>
+</html>

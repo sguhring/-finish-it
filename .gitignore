@@ -1,0 +1,31 @@
+.vscode/
+venv/
+__pycache__/
+*.pyc
+
+# Local Flutter SDK checkout, not project source
+flutter/
+
+# Python debug and scratch outputs
+debug_*.png
+ocr_debug*.png
+ocr_region_*test*.png
+ocr_region_debug.png
+ocr_region_current.png
+ocr_throw_debug_*.png
+
+# Local scratch files
+First.py
+Dart.py
+fl
+fl.dart
+import pandas as pd.py
+
+# Nested Flutter project generated files
+flutter_application_1/.dart_tool/
+flutter_application_1/.idea/
+flutter_application_1/.venv/
+flutter_application_1/.vscode/
+flutter_application_1/build/
+flutter_application_1/.flutter-plugins-dependencies
+flutter_application_1/flutter_01.log

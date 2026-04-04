@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "OCR-A Font Injector",
+  "version": "1.0",
+  "description": "Replaces all fonts on the current page with OCR-A for better OCR accuracy",
+  "permissions": ["activeTab"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1:5000/*", "http://localhost:5000/*", "https://game.scoliadarts.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

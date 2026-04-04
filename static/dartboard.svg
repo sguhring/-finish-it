@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Dartboard">
+  <defs>
+    <clipPath id="clipCircle">
+      <circle cx="100" cy="100" r="96" />
+    </clipPath>
+  </defs>
+
+  <!-- Outer rim -->
+  <circle cx="100" cy="100" r="98" fill="#ffffff" />
+  <circle cx="100" cy="100" r="96" fill="#111111" />
+
+  <!-- Numbers (standard dartboard order, starting at 20 on top, clockwise) -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="14" fill="#f3f5f7" text-anchor="middle" dominant-baseline="middle">
+    <g transform="rotate(0 100 100)"><text x="100" y="16" transform="rotate(0 100 16)">20</text></g>
+    <g transform="rotate(18 100 100)"><text x="100" y="16" transform="rotate(-18 100 16)">1</text></g>
+    <g transform="rotate(36 100 100)"><text x="100" y="16" transform="rotate(-36 100 16)">18</text></g>
+    <g transform="rotate(54 100 100)"><text x="100" y="16" transform="rotate(-54 100 16)">4</text></g>
+    <g transform="rotate(72 100 100)"><text x="100" y="16" transform="rotate(-72 100 16)">13</text></g>
+    <g transform="rotate(90 100 100)"><text x="100" y="16" transform="rotate(-90 100 16)">6</text></g>
+    <g transform="rotate(108 100 100)"><text x="100" y="16" transform="rotate(-108 100 16)">10</text></g>
+    <g transform="rotate(126 100 100)"><text x="100" y="16" transform="rotate(-126 100 16)">15</text></g>
+    <g transform="rotate(144 100 100)"><text x="100" y="16" transform="rotate(-144 100 16)">2</text></g>
+    <g transform="rotate(162 100 100)"><text x="100" y="16" transform="rotate(-162 100 16)">17</text></g>
+    <g transform="rotate(180 100 100)"><text x="100" y="16" transform="rotate(-180 100 16)">3</text></g>
+    <g transform="rotate(198 100 100)"><text x="100" y="16" transform="rotate(-198 100 16)">19</text></g>
+    <g transform="rotate(216 100 100)"><text x="100" y="16" transform="rotate(-216 100 16)">7</text></g>
+    <g transform="rotate(234 100 100)"><text x="100" y="16" transform="rotate(-234 100 16)">16</text></g>
+    <g transform="rotate(252 100 100)"><text x="100" y="16" transform="rotate(-252 100 16)">8</text></g>
+    <g transform="rotate(270 100 100)"><text x="100" y="16" transform="rotate(-270 100 16)">11</text></g>
+    <g transform="rotate(288 100 100)"><text x="100" y="16" transform="rotate(-288 100 16)">14</text></g>
+    <g transform="rotate(306 100 100)"><text x="100" y="16" transform="rotate(-306 100 16)">9</text></g>
+    <g transform="rotate(324 100 100)"><text x="100" y="16" transform="rotate(-324 100 16)">12</text></g>
+    <g transform="rotate(342 100 100)"><text x="100" y="16" transform="rotate(-342 100 16)">5</text></g>
+  </g>
+
+  <!-- 20 segment lines (simple visual cue) -->
+  <g clip-path="url(#clipCircle)" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2">
+    <line x1="100" y1="100" x2="100" y2="4" />
+    <line x1="100" y1="100" x2="129.4" y2="8.6" />
+    <line x1="100" y1="100" x2="156.5" y2="22.0" />
+    <line x1="100" y1="100" x2="177.9" y2="43.5" />
+    <line x1="100" y1="100" x2="191.4" y2="70.6" />
+    <line x1="100" y1="100" x2="196" y2="100" />
+    <line x1="100" y1="100" x2="191.4" y2="129.4" />
+    <line x1="100" y1="100" x2="177.9" y2="156.5" />
+    <line x1="100" y1="100" x2="156.5" y2="177.9" />
+    <line x1="100" y1="100" x2="129.4" y2="191.4" />
+    <line x1="100" y1="100" x2="100" y2="196" />
+    <line x1="100" y1="100" x2="70.6" y2="191.4" />
+    <line x1="100" y1="100" x2="43.5" y2="177.9" />
+    <line x1="100" y1="100" x2="22.0" y2="156.5" />
+    <line x1="100" y1="100" x2="8.6" y2="129.4" />
+    <line x1="100" y1="100" x2="4" y2="100" />
+    <line x1="100" y1="100" x2="8.6" y2="70.6" />
+    <line x1="100" y1="100" x2="22.0" y2="43.5" />
+    <line x1="100" y1="100" x2="43.5" y2="22.0" />
+    <line x1="100" y1="100" x2="70.6" y2="8.6" />
+  </g>
+
+  <!-- Rings (use existing green palette from the app) -->
+  <circle cx="100" cy="100" r="78" fill="#f3f5f7" />
+  <circle cx="100" cy="100" r="70" fill="#111111" />
+
+  <!-- Triple ring -->
+  <circle cx="100" cy="100" r="58" fill="#f3f5f7" />
+  <circle cx="100" cy="100" r="52" fill="#2e7d32" />
+  <circle cx="100" cy="100" r="46" fill="#111111" />
+
+  <!-- Bull -->
+  <circle cx="100" cy="100" r="18" fill="#f3f5f7" />
+  <circle cx="100" cy="100" r="12" fill="#2e7d32" />
+</svg>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finish IT - All Finishes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      color: #111;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #fff;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-text h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.1;
+    }
+    .header-text p {
+      font-size: 0.75rem;
+      color: #3dbfa3;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .header-logo {
+      width: 52px;
+      height: 52px;
+    }
+
+    /* ── Back button ── */
+    .back-bar {
+      padding: 12px 14px 4px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.10);
+      text-decoration: none;
+    }
+    .back-btn:hover { background: #f5f5f5; }
+
+    /* ── Page title ── */
+    .page-title {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #888;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 0 4px;
+    }
+
+    /* ── Content wrapper ── */
+    .content {
+      padding: 8px 12px 32px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── Score card ── */
+    .score-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 18px 16px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    }
+
+    .score-number {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: #111;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    /* ── Ways grid ── */
+    .ways-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .way-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── Dart pill ── */
+    .dart-pill {
+      flex: 1;
+      text-align: center;
+      padding: 10px 4px;
+      background: #f7f7f7;
+      border: 1.5px solid #e2e2e2;
+      border-radius: 50px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #222;
+      white-space: nowrap;
+    }
+
+    /* Double highlight (last dart = finishing double) */
+    .dart-pill.is-double {
+      border-color: #3dbfa3;
+      color: #2aa08a;
+    }
+
+    /* ── No outshot ── */
+    .no-way {
+      text-align: center;
+      color: #bbb;
+      font-style: italic;
+      font-size: 0.88rem;
+      padding: 6px 0 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+
+
+
+  <!-- Back -->
+  <div class="back-bar">
+    <a href="/" class="back-btn">&#8592; Back</a>
+  </div>
+
+  <div class="page-title">All Finishes &nbsp;2 – 170</div>
+
+  <!-- Cards -->
+  <div class="content">
+    {% for row in rows %}
+      <div class="score-card">
+        <div class="score-number">{{ row.score }}</div>
+
+        {% if row.suggested and row.suggested|length > 0 %}
+          <div class="section-label">Suggested ways</div>
+          <div class="ways-grid">
+            {% for way in row.suggested %}
+              <div class="way-row">
+                {% set darts = way[1:] if way|length > 0 and way[0] == 'NA' else way %}
+                {% for dart in darts %}
+                  <span class="dart-pill {% if loop.last %}is-double{% endif %}">{{ dart }}</span>
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="no-way">No possible outshot</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+</body>
+<script>
+// Pinch-to-zoom for header on touch devices only
+const header = document.getElementById('zoom-header');
+let headerZoom = 1;
+let lastDist = null;
+header.addEventListener('touchmove', function(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (lastDist) {
+      const factor = dist / lastDist;
+      headerZoom *= factor;
+      header.style.transform = `scale(${headerZoom})`;
+      header.style.transformOrigin = 'top left';
+    }
+    lastDist = dist;
+  }
+}, { passive: false });
+header.addEventListener('touchend', function(e) {
+  if (e.touches.length < 2) lastDist = null;
+});
+</script>
+</html>
