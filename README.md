@@ -219,6 +219,8 @@ The CNN is not used by `app.py` by default — template matching covers the same
 - **Browser zoom**: make sure your browser zoom level is consistent between template capture and live use — rescaling changes the digit rendering and breaks template matches.
 
 ---
+## Todo
+Investigating why CNN improved so little during each epochs and cosums a lot of computing power
 
 ## License
 
