@@ -221,6 +221,7 @@ The CNN is not used by `app.py` by default — template matching covers the same
 ---
 ## Todo
 Investigating why CNN improved so little during each epochs and cosums a lot of computing power
+Experiment with different crawler libraries
 
 ## License
 
