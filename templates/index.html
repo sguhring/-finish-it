@@ -380,6 +380,37 @@
             color: #fff;
         }
         #liveWays { margin-top: 10px; }
+
+        /* ── Captured region preview ── */
+        .region-preview { margin-top: 10px; }
+        .region-preview-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .region-dims {
+            color: #3dbfa3;
+            font-family: 'Oswald', 'Poppins', sans-serif;
+            letter-spacing: 0;
+        }
+        .region-frame {
+            border: 2px solid #3dbfa3;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            line-height: 0;
+        }
+        .region-frame img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -405,6 +436,18 @@
             <h3>Live Score (OCR)</h3>
             <div>Score: <span id="liveScore">—</span></div>
             <div id="liveMsg"></div>
+
+            <!-- Captured region preview -->
+            <div class="region-preview">
+                <div class="region-preview-head">
+                    <span>Captured Region</span>
+                    <span id="regionDims" class="region-dims">—</span>
+                </div>
+                <div class="region-frame">
+                    <img id="regionImg" alt="OCR capture region" />
+                </div>
+            </div>
+
             <div id="liveWays" class="ways-grid"></div>
         </div>
 
@@ -681,6 +724,10 @@
         if (ocrBtn) ocrBtn.onclick = toggleOcr;
 
         updateOcrButtonLabel();
+        fetch("/api/current_field").then(r => r.json()).then(d => {
+            updateFieldButtons(d.field);
+            updateRegionDims(d.region);
+        }).catch(() => {});
         if (isOcrEnabled()) startOcr();
         else stopOcr();
     }
@@ -690,6 +737,18 @@
     function updateFieldButtons(activeField) {
         document.getElementById("fieldBtn1").classList.toggle("active", activeField === 1);
         document.getElementById("fieldBtn2").classList.toggle("active", activeField === 2);
+    }
+
+    function updateRegionDims(region) {
+        const el = document.getElementById("regionDims");
+        if (el && region) {
+            el.textContent = `${region.width}×${region.height} @ ${region.left},${region.top}`;
+        }
+    }
+
+    function refreshRegionPreview() {
+        const img = document.getElementById("regionImg");
+        if (img) img.src = "/api/region_preview?t=" + Date.now();
     }
 
     async function setField(field) {
@@ -702,7 +761,11 @@
                 body: JSON.stringify({ field })
             });
             const data = await res.json();
-            if (data.ok) updateFieldButtons(data.field);
+            if (data.ok) {
+                updateFieldButtons(data.field);
+                updateRegionDims(data.region);
+                refreshRegionPreview();
+            }
         } catch (e) {
             console.log("setField error", e);
         } finally {
@@ -710,7 +773,10 @@
         }
     }
 
-    fetch("/api/current_field").then(r => r.json()).then(d => updateFieldButtons(d.field)).catch(() => {});
+    fetch("/api/current_field").then(r => r.json()).then(d => {
+        updateFieldButtons(d.field);
+        updateRegionDims(d.region);
+    }).catch(() => {});
 
     async function submitScore(score) {
         try {
@@ -741,6 +807,7 @@
                 liveSection.classList.add("active");
                 document.getElementById("liveScore").textContent = data.score ?? "—";
                 document.getElementById("liveMsg").textContent = data.message ?? "";
+                refreshRegionPreview();
                 updateTitle(data.score);
 
                 if (data.score !== lastSubmittedScore && data.score !== null) {
