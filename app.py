@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import numpy as np
 import threading
 import time
 import re
 import os
+import io
 
 import mss
 import cv2
@@ -910,7 +911,31 @@ def api_set_field():
 
 @app.route('/api/current_field')
 def api_current_field():
-    return jsonify({"field": current_field})
+    with lock:
+        region = dict(OCR_REGION)
+    return jsonify({"field": current_field, "region": region})
+
+
+@app.route('/api/region_preview')
+def api_region_preview():
+    """Capture the current OCR region and return it as a PNG.
+
+    Lets you see in the browser exactly which part of the screen is captured.
+    """
+    with lock:
+        region = dict(OCR_REGION)
+    try:
+        with mss.mss() as sct:
+            img = np.array(sct.grab(region))   # BGRA
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        ok, buf = cv2.imencode(".png", img_bgr)
+        if not ok:
+            return "encode failed", 500
+        resp = send_file(io.BytesIO(buf.tobytes()), mimetype="image/png")
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+    except Exception as e:
+        return f"capture error: {e}", 500
 
 
 @app.route('/', methods=['GET', 'POST'])
