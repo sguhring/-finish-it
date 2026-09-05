@@ -190,6 +190,17 @@ IDLE_PALETTE    = 11    # "Rainbow"
 IDLE_SPEED      = 40    # 0-255; low values drift slowly
 IDLE_BRIGHTNESS = 90
 
+# Leg-Ende: der Ring pulsiert kurz kräftig, dann zurück zur Score-Farbe.
+# "Breathe" (fx 2) ist ein echtes An- und Abschwellen -- "Blink" waere hartes
+# Ein/Aus, "Strobe" ein Flackern. Effekt-Id vom Geraet selbst (GET /json/eff).
+PULSE_S          = 4.0          # wie lange der Puls laeuft
+PULSE_EFFECT     = 2            # "Breathe"
+PULSE_SPEED      = 220          # 0-255, hoch = schnell
+PULSE_BRIGHTNESS = 255
+PULSE_COLOUR     = (255, 255, 255)
+
+pulse_until = 0.0               # bis wann der Puls die Anzeige belegt
+
 _wled_queue: queue.Queue = queue.Queue(maxsize=1)
 
 
@@ -219,6 +230,15 @@ def score_state(V) -> dict:
     return {
         "on": True, "bri": WLED_BRIGHTNESS,
         "seg": [{"id": 0, "fx": 0, "col": [list(score_colour(V))]}],
+    }
+
+
+def pulse_state() -> dict:
+    """Build the WLED state for the leg-end pulse."""
+    return {
+        "on": True, "bri": PULSE_BRIGHTNESS,
+        "seg": [{"id": 0, "fx": PULSE_EFFECT, "sx": PULSE_SPEED, "ix": 255,
+                 "col": [list(PULSE_COLOUR)]}],
     }
 
 
@@ -431,6 +451,7 @@ def ocr_loop(poll_s: float = 0.35):
     _candidate_count = 0
     _REQUIRED_CONSECUTIVE = 2
     _led_shown = object()   # sentinel, so the first accepted score always fires
+    _pulsing = False        # leg-end pulse currently owns the ring
     while True:
         try:
             with lock:
@@ -475,7 +496,18 @@ def ocr_loop(poll_s: float = 0.35):
                     _score_now        = latest_score
 
             # Outside the lock: the status light must never hold up OCR.
-            if _score_now != _led_shown:
+            #
+            # While a leg-end pulse is running it owns the ring -- otherwise the
+            # very next poll would overwrite it with the score colour, and since
+            # the score drops to 0 at exactly that moment the pulse would never
+            # be seen at all. When it expires the score colour is forced back on
+            # by clearing what we think is displayed.
+            if time.time() < pulse_until:
+                _pulsing = True
+            elif _pulsing:
+                _pulsing = False
+                _led_shown = object()
+            if not _pulsing and _score_now != _led_shown:
                 _led_shown = _score_now
                 set_led(score_state(_score_now))
         except Exception as e:
@@ -1129,6 +1161,25 @@ def api_score():
         pushed_ts = time.time()
         field_now = current_field
     return _cors(jsonify({"ok": True, "accepted": got, "current_field": field_now}))
+
+
+@app.route('/api/leg_end', methods=['POST', 'OPTIONS'])
+def api_leg_end():
+    """Fired by the extension when a player's score reaches 0.
+
+    Runs the ring through a short, bright pulse. Deliberately idempotent-ish:
+    a second call while a pulse is already running just extends it, so a double
+    fire from the extension looks like one slightly longer celebration rather
+    than a stutter.
+    """
+    global pulse_until
+    if request.method == 'OPTIONS':
+        return _cors(app.make_default_options_response())
+
+    pulse_until = time.time() + PULSE_S
+    set_led(pulse_state())
+    print("LEG END -- pulsing")
+    return _cors(jsonify({"ok": True, "pulse_s": PULSE_S}))
 
 
 @app.route('/api/region_preview')
