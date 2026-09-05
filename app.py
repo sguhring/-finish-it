@@ -193,9 +193,9 @@ IDLE_BRIGHTNESS = 90
 # Leg-Ende: der Ring pulsiert kurz kräftig, dann zurück zur Score-Farbe.
 # "Breathe" (fx 2) ist ein echtes An- und Abschwellen -- "Blink" waere hartes
 # Ein/Aus, "Strobe" ein Flackern. Effekt-Id vom Geraet selbst (GET /json/eff).
-PULSE_S          = 4.0          # wie lange der Puls laeuft
+PULSE_S          = 8.0          # wie lange der Puls laeuft
 PULSE_EFFECT     = 2            # "Breathe"
-PULSE_SPEED      = 220          # 0-255, hoch = schnell
+PULSE_SPEED      = 255          # 0-255, hoch = schnell
 PULSE_BRIGHTNESS = 255
 PULSE_COLOUR     = (255, 255, 255)
 
