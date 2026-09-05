@@ -24,6 +24,9 @@ python app.py
 python auto_capture.py        # automated: drives the browser via pyautogui, loops 0..501
 python capture_templates.py   # manual: live preview window, SPACE to capture each score
 
+# Walk the LED ring through idle + the full score gradient (needs the ESP reachable)
+python test_led.py
+
 # CNN pipeline (NOTE: currently NOT used by app.py — see "OCR pipeline" below)
 python generate_data.py       # render synthetic training images -> training_data/
 python train.py               # train ScoreCNN -> darts_ocr.pth
@@ -88,6 +91,24 @@ These per-score filters and the `_SUGGESTED_ROWS` indices are darts-domain heuri
 combination ordering in `calculate_output` will silently break the `_SUGGESTED_ROWS` index lookups,
 which reference specific row positions.
 
+### 3. WLED status light (background thread)
+`ocr_loop()` mirrors the checkout situation on an addressable LED ring around the Scolia surround
+(WLED at `WLED_HOST`, currently `192.168.8.83`; set `WLED_ENABLED = False` to switch it off).
+
+- `score_colour(V)` interpolates the **hue** from red (170) to green (2) — blending RGB directly
+  would pass through a muddy brown, so the interpolation is deliberately in HSV. Scores with no
+  checkout (`NO_CHECKOUT_SCORES`, plus 1 and >170) get a flat blue; `None` means the idle rainbow
+  effect, so the ring is never dark between games.
+- The HTTP call runs on its own thread (`wled_loop`) fed by a **single-slot queue** (`set_led`):
+  latest state wins, never blocks, so an unreachable ESP can never stall the OCR reader. The push
+  only fires when the accepted score actually *changes*, not on every poll.
+- `test_led.py` walks the whole range on the real strip — idle, the full gradient, the no-checkout
+  colour — printing the RGB for each. Run it with the app stopped.
+
+> The ESP also has a **boot preset** saved on the device, so the ring animates without any network
+> at all. If the display is stuck on that preset, `app.py` is not reaching `WLED_HOST` — check the
+> IP first, since a DHCP lease change silently points it at nothing.
+
 ### Flask routes & frontend
 - `GET/POST /` → `templates/index.html`: manual score-entry form + the live-OCR panel.
 - `GET /finishes` → `templates/finishes.html`: full precomputed checkout table (scores 2–170,
@@ -106,17 +127,31 @@ Static assets in `static/`; the `templates/` dir is Flask Jinja templates (disti
 `templates_capture/`, which holds OCR reference images).
 
 ### Edge extension (`edge-extension/`)
-A Manifest V3 content script doing two jobs on `game.scoliadarts.com`:
+A Manifest V3 content script doing three jobs on `game.scoliadarts.com`:
 
 1. **The score bridge** (primary): every 250 ms it finds the two score elements in the DOM and
    POSTs them to `http://127.0.0.1:5000/api/score`, with a 2 s heartbeat so an unchanged score
    keeps push mode alive. Elements are found heuristically — visible leaf elements whose whole
    text is a 1–3 digit number ≤ 501, the two largest by font size, leftmost = field 1. Set
    `SCORE_SELECTOR` at the top of `content.js` to pin an exact selector if the heuristic misfires;
-   it logs its picks (and, on failure, all candidates) to the page console. Anything other than
-   exactly two matches pushes nothing, so the app falls back to OCR rather than guessing.
-2. **OCR-A font injection** (fallback support): makes on-screen digits uniform so the screen-OCR
+   it logs its picks (and, on failure, all candidates) to the page console.
+
+   Scolia normally shows **one** player at a time, so a single number drawn far larger than
+   anything else (`DOMINANT_RATIO` = 1.35× the runner-up) is treated as *the* score and pushed
+   to both fields. A genuine side-by-side layout still maps leftmost → field 1. Anything more
+   ambiguous pushes nothing, so the app falls back to OCR rather than guessing.
+2. **The on-page overlay**: a draggable panel in a shadow root (so it can never match its own
+   score heuristic) that polls `/api/outshot` every 600 ms and draws the checkout suggestions
+   onto the game page — no second window needed. Its P1/P2/AUTO buttons drive `/api/set_field`.
+   In **AUTO** (the default) it stops caring which button is pressed and follows whichever player
+   the page is showing, identified by name; names are mapped to fields in the order first seen
+   and remembered in `localStorage`. Pinning P1 or P2 leaves AUTO; double-clicking AUTO forgets
+   the learned names.
+3. **OCR-A font injection** (fallback support): makes on-screen digits uniform so the screen-OCR
    fallback stays accurate. If OCR accuracy regresses, check this is still active.
+
+`popup.html` / `popup.js` show the same live status (app reachable, source, field, score, ways)
+from the extension's own origin.
 
 Requires `host_permissions` for `127.0.0.1:5000` — that is what lets the content script's `fetch`
 bypass the page's CSP and CORS.
