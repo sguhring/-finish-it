@@ -373,6 +373,21 @@
             text-transform: uppercase;
             margin-bottom: 8px;
         }
+        .live-source {
+            font-size: 0.62em;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 999px;
+            vertical-align: middle;
+            border: 1px solid currentColor;
+            opacity: 0.85;
+        }
+        .live-source.push { color: #22c55e; }
+        .live-source.ocr  { color: #f59e0b; }
+        .live-source.none { color: #94a3b8; }
+
         #liveScore {
             font-family: 'Oswald', 'Poppins', sans-serif;
             font-size: 1.5rem;
@@ -433,7 +448,7 @@
 
         <!-- Live OCR Section -->
         <div id="liveSection">
-            <h3>Live Score (OCR)</h3>
+            <h3>Live Score <span id="liveSource" class="live-source">—</span></h3>
             <div>Score: <span id="liveScore">—</span></div>
             <div id="liveMsg"></div>
 
@@ -796,6 +811,15 @@
         }
     }
 
+    // "push" = exact values from the browser extension, "ocr" = screen reading.
+    function setSource(src) {
+        const el = document.getElementById("liveSource");
+        if (!el) return;
+        const s = src || "none";
+        el.className = "live-source " + s;
+        el.textContent = s === "push" ? "extension" : s === "ocr" ? "screen ocr" : "—";
+    }
+
     async function refreshOutshot() {
         if (!isOcrEnabled()) return;
         try {
@@ -806,6 +830,7 @@
             if (data.ok) {
                 liveSection.classList.add("active");
                 document.getElementById("liveScore").textContent = data.score ?? "—";
+                setSource(data.source);
                 document.getElementById("liveMsg").textContent = data.message ?? "";
                 refreshRegionPreview();
                 updateTitle(data.score);

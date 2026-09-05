@@ -5,6 +5,10 @@ import time
 import re
 import os
 import io
+import json
+import queue
+import colorsys
+import urllib.request
 
 import mss
 import cv2
@@ -131,6 +135,122 @@ latest_score = None
 latest_raw_text = ""
 latest_updated_ts = 0.0
 lock = threading.Lock()
+
+
+# ---------------------------------------------------------------------------
+# Pushed scores (browser extension)
+#
+# The Edge content script reads the scores straight out of the Scolia DOM and
+# POSTs them to /api/score. Those values are exact by construction, so while a
+# fresh push is available ocr_loop() uses it and skips the screen grab and
+# template match entirely. Screen OCR stays as the fallback for when the
+# extension is not running (or the page layout changed under it).
+# ---------------------------------------------------------------------------
+
+PUSH_TTL_S = 5.0          # a push older than this is considered stale
+pushed_scores: dict[int, int | None] = {1: None, 2: None}
+pushed_ts = 0.0
+latest_source = "none"    # "push" | "ocr" | "none"
+
+
+# ---------------------------------------------------------------------------
+# WLED status light
+#
+# Mirrors the current checkout situation on an RGB strip around the board.
+# The colour is pushed from ocr_loop() whenever the accepted score *changes* —
+# not on every poll — and the actual HTTP call runs on its own thread, so an
+# unreachable ESP can never stall the OCR reader.
+# ---------------------------------------------------------------------------
+
+WLED_HOST = "192.168.8.83"
+WLED_ENABLED = True
+WLED_BRIGHTNESS = 160        # 0-255; WLED still applies its own current limit
+WLED_TIMEOUT_S = 0.6
+
+# Scores with no valid 3-dart checkout (also used by print_solution)
+NO_CHECKOUT_SCORES = frozenset({159, 162, 163, 165, 166, 168, 169})
+
+LED_OFF       = (0, 0, 0)
+LED_NO_FINISH = (0, 40, 120)    # blue — out of checkout range, keep scoring
+
+# Inside the checkout range the colour is a continuous gradient rather than
+# steps: red at 170, through orange and yellow, to green at 2. Interpolating
+# the hue (not the RGB channels) is what keeps the middle a clean amber —
+# blending red to green in RGB would pass through a muddy brown instead.
+HUE_FAR   = 0.0     # 0°   red   at score 170
+HUE_CLOSE = 120.0   # 120° green at score 2
+CHECKOUT_MAX = 170
+CHECKOUT_MIN = 2
+
+# Idle animation: shown whenever no score is being read, so the ring is never
+# just dark between games. Effect and palette ids come from the device itself
+# (GET /json/eff and /json/pal).
+IDLE_EFFECT     = 9     # "Rainbow"
+IDLE_PALETTE    = 11    # "Rainbow"
+IDLE_SPEED      = 40    # 0-255; low values drift slowly
+IDLE_BRIGHTNESS = 90
+
+_wled_queue: queue.Queue = queue.Queue(maxsize=1)
+
+
+def score_colour(V) -> tuple[int, int, int]:
+    """Map an OCR'd score to the status colour for the LED ring."""
+    if V is None:
+        return LED_OFF
+    if V == 1 or V > CHECKOUT_MAX or V in NO_CHECKOUT_SCORES:
+        return LED_NO_FINISH
+
+    span = CHECKOUT_MAX - CHECKOUT_MIN
+    t = (V - CHECKOUT_MIN) / span          # 0.0 at score 2, 1.0 at score 170
+    t = min(1.0, max(0.0, t))
+    hue = (HUE_CLOSE + t * (HUE_FAR - HUE_CLOSE)) / 360.0
+    r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+    return (round(r * 255), round(g * 255), round(b * 255))
+
+
+def score_state(V) -> dict:
+    """Build the WLED state for a score, or the idle animation when there is none."""
+    if V is None:
+        return {
+            "on": True, "bri": IDLE_BRIGHTNESS,
+            "seg": [{"id": 0, "fx": IDLE_EFFECT, "pal": IDLE_PALETTE,
+                     "sx": IDLE_SPEED, "ix": 128}],
+        }
+    return {
+        "on": True, "bri": WLED_BRIGHTNESS,
+        "seg": [{"id": 0, "fx": 0, "col": [list(score_colour(V))]}],
+    }
+
+
+def _wled_send(state: dict) -> None:
+    req = urllib.request.Request(
+        f"http://{WLED_HOST}/json/state", data=json.dumps(state).encode(),
+        headers={"Content-Type": "application/json"})
+    urllib.request.urlopen(req, timeout=WLED_TIMEOUT_S).read()
+
+
+def wled_loop():
+    """Background thread: drain the single-slot queue and talk to the ESP."""
+    while True:
+        state = _wled_queue.get()
+        try:
+            _wled_send(state)
+        except Exception as e:
+            print(f"WLED: {e}")
+
+
+def set_led(state: dict) -> None:
+    """Hand a state to the sender thread. Latest value wins, never blocks."""
+    if not WLED_ENABLED:
+        return
+    try:
+        _wled_queue.get_nowait()     # drop a state that is already stale
+    except queue.Empty:
+        pass
+    try:
+        _wled_queue.put_nowait(state)
+    except queue.Full:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -306,29 +426,58 @@ def ocr_read_score_region() -> tuple[int | None, str]:
 
 def ocr_loop(poll_s: float = 0.35):
     """Background thread: refresh latest_score every poll_s seconds."""
-    global latest_score, latest_raw_text, latest_updated_ts
+    global latest_score, latest_raw_text, latest_updated_ts, latest_source
     _candidate = None
     _candidate_count = 0
     _REQUIRED_CONSECUTIVE = 2
+    _led_shown = object()   # sentinel, so the first accepted score always fires
     while True:
         try:
-            score, raw = ocr_read_score_region()
-            # Debounce: only accept a score after it appears 3 consecutive times
-            if score is not None:
-                if score == _candidate:
-                    _candidate_count += 1
-                else:
-                    _candidate = score
-                    _candidate_count = 1
-            else:
-                _candidate = None
-                _candidate_count = 0
-
             with lock:
-                if _candidate_count >= _REQUIRED_CONSECUTIVE:
-                    latest_score = _candidate
-                latest_raw_text = raw
-                latest_updated_ts = time.time()
+                fresh_push = (time.time() - pushed_ts) <= PUSH_TTL_S
+                push_val   = pushed_scores.get(current_field) if fresh_push else None
+                field_now  = current_field
+
+            if fresh_push:
+                # Exact value from the browser: no OCR, and no debounce needed
+                # because there is nothing to misread.
+                _candidate, _candidate_count = None, 0
+                with lock:
+                    latest_score      = push_val
+                    latest_raw_text   = f"push: field{field_now}={push_val}"
+                    latest_updated_ts = time.time()
+                    latest_source     = "push"
+                    _score_now        = latest_score
+            else:
+                score, raw = ocr_read_score_region()
+                # Debounce: only accept a score after it appears 3 consecutive times
+                if score is not None:
+                    if score == _candidate:
+                        _candidate_count += 1
+                    else:
+                        _candidate = score
+                        _candidate_count = 1
+                else:
+                    _candidate = None
+                    _candidate_count = 0
+
+                with lock:
+                    # An OCR pass can take a second or more (Tesseract fallback
+                    # especially). If a push landed while we were busy, that
+                    # value is authoritative — drop what we just read.
+                    if (time.time() - pushed_ts) <= PUSH_TTL_S:
+                        continue
+                    if _candidate_count >= _REQUIRED_CONSECUTIVE:
+                        latest_score = _candidate
+                    latest_raw_text   = raw
+                    latest_updated_ts = time.time()
+                    latest_source     = "ocr"
+                    _score_now        = latest_score
+
+            # Outside the lock: the status light must never hold up OCR.
+            if _score_now != _led_shown:
+                _led_shown = _score_now
+                set_led(score_state(_score_now))
         except Exception as e:
             with lock:
                 latest_raw_text = f"OCR error: {e}"
@@ -739,7 +888,7 @@ _EXCL = {18, 21, 22, 26, 27, 29, 30, 31, 33, 34, 38}
 _RETURN_ALL = (
     {v for v in range(1, 61) if v not in _EXCL} |
     {79, 86, 87, 88, 89, 93, 96, 116, 117, 118, 119, 120, 142, 153, 156, 160} |
-    set(range(97, 100)) |
+    set(range(97, 101)) |
     (set(range(160, 170)) - {161})
 )
 
@@ -827,7 +976,7 @@ def single_double_double_finishes(V, all_ways=None):
 
 def print_solution(V):
     """Return a message indicating whether a checkout is possible for score V."""
-    if V in {159, 162, 163, 165, 166, 168, 169} or V > 170 or V == 1:
+    if V in NO_CHECKOUT_SCORES or V > 170 or V == 1:
         return "No possible outshot"
     return "Good Luck"
 
@@ -876,10 +1025,13 @@ def api_outshot():
         V   = latest_score
         raw = latest_raw_text
         ts  = latest_updated_ts
+        src = latest_source
+        fld = current_field
 
     if V is None:
         return jsonify({"ok": False, "score": None, "message": "No score detected",
-                        "raw": raw, "updated_ts": ts})
+                        "raw": raw, "updated_ts": ts, "source": src,
+                        "field": fld})
 
     ways  = suggested_ways(V)
     na_dd = na_double_double_finishes(V)
@@ -893,6 +1045,8 @@ def api_outshot():
         "single_double_double_finishes": sdd.tolist()   if isinstance(sdd,   np.ndarray) else [],
         "raw": raw,
         "updated_ts": ts,
+        "source": src,
+        "field": fld,
     })
 
 
@@ -914,6 +1068,67 @@ def api_current_field():
     with lock:
         region = dict(OCR_REGION)
     return jsonify({"field": current_field, "region": region})
+
+
+def _cors(resp):
+    """Allow the Scolia page's extension to POST here.
+
+    Chrome also gates public -> private-network requests behind a preflight
+    that wants Allow-Private-Network, hence the third header.
+    """
+    resp.headers["Access-Control-Allow-Origin"]           = "*"
+    resp.headers["Access-Control-Allow-Headers"]          = "Content-Type"
+    resp.headers["Access-Control-Allow-Methods"]          = "POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Private-Network"]  = "true"
+    return resp
+
+
+def _clean_score(v):
+    """Accept only plausible darts scores; anything else is dropped."""
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return None
+    return v if 0 <= v <= 501 else None
+
+
+@app.route('/api/score', methods=['POST', 'OPTIONS'])
+def api_score():
+    """Exact scores pushed from the browser extension — no OCR involved.
+
+    Payload is either both fields at once::
+
+        {"field1": 501, "field2": 340}
+
+    or a single one::
+
+        {"field": 2, "score": 340}
+
+    While these keep arriving, ocr_loop() serves them instead of reading the
+    screen; if they stop for PUSH_TTL_S it silently falls back to OCR.
+    """
+    global pushed_ts
+    if request.method == 'OPTIONS':
+        return _cors(app.make_default_options_response())
+
+    data = request.get_json(silent=True) or {}
+    got = {}
+    for field in (1, 2):
+        key = f"field{field}"
+        if key in data:
+            got[field] = _clean_score(data[key])
+    single = _clean_score(data.get("field"))
+    if single in (1, 2) and "score" in data:
+        got[single] = _clean_score(data["score"])
+
+    if not got:
+        return _cors(jsonify({"ok": False, "message": "no field1/field2/score in payload"})), 400
+
+    with lock:
+        pushed_scores.update(got)
+        pushed_ts = time.time()
+        field_now = current_field
+    return _cors(jsonify({"ok": True, "accepted": got, "current_field": field_now}))
 
 
 @app.route('/api/region_preview')
@@ -967,4 +1182,5 @@ def index():
 # === App entry point ===
 if __name__ == '__main__':
     threading.Thread(target=ocr_loop, daemon=True).start()
+    threading.Thread(target=wled_loop, daemon=True).start()
     app.run(debug=True)

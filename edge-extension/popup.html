@@ -7,17 +7,58 @@
       font-family: monospace;
       background: #111;
       color: #3dbfa3;
-      padding: 16px;
-      width: 200px;
-      text-align: center;
+      padding: 14px;
+      width: 330px;
+      margin: 0;
     }
-    h2 { font-size: 0.9rem; margin-bottom: 8px; color: #fff; }
-    p  { font-size: 0.72rem; color: #555; }
+    h2 { font-size: 1rem; margin: 0 0 10px; color: #fff; text-align: center; }
+    .row { display: flex; justify-content: space-between; font-size: 0.82rem; margin: 5px 0; }
+    .k { color: #666; }
+    .v { color: #3dbfa3; font-weight: bold; }
+    .v.warn { color: #f59e0b; }
+    .v.bad  { color: #ef4444; }
+
+    hr { border: 0; border-top: 1px solid #222; margin: 12px 0 10px; }
+
+    .score {
+      font-size: 52px; font-weight: bold; line-height: 1;
+      text-align: center; margin-bottom: 6px; color: #e5e7eb;
+    }
+    .score.easy { color: #22c55e; }
+    .score.mid  { color: #f59e0b; }
+    .score.big  { color: #a855f7; }
+    .score.dead { color: #ef4444; }
+
+    .msg { font-size: 0.74rem; color: #777; text-align: center; margin-bottom: 8px; }
+
+    .way { display: flex; gap: 4px; margin-top: 4px; }
+    .way.best .d { border-color: #22c55e; color: #d1fae5; }
+    .d {
+      flex: 1; text-align: center;
+      padding: 9px 0; font-size: 1.05rem; font-weight: bold;
+      background: #0f172a; border: 1px solid #1f2937; border-radius: 4px;
+      color: #cbd5e1;
+    }
+    .d.dbl { background: #14532d33; }
+
+    p.hint { font-size: 0.66rem; color: #555; margin: 10px 0 0; line-height: 1.4; }
   </style>
 </head>
 <body>
-  <h2>OCR-A Font Injector</h2>
-  <p>Automatically applies OCR-A font to<br><strong style="color:#3dbfa3">127.0.0.1:5000</strong></p>
-  <p style="margin-top:10px">Active on Finish IT ✓</p>
+  <h2>Finish IT bridge</h2>
+
+  <div class="row"><span class="k">app</span><span class="v" id="app">…</span></div>
+  <div class="row"><span class="k">source</span><span class="v" id="src">…</span></div>
+  <div class="row"><span class="k">field</span><span class="v" id="field">…</span></div>
+
+  <hr/>
+
+  <div class="score" id="score">—</div>
+  <div class="msg" id="msg"></div>
+  <div id="ways"></div>
+
+  <p class="hint" id="hint"></p>
+
+  <script src="popup.js"></script>
 </body>
 </html>

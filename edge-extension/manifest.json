@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "OCR-A Font Injector",
-  "version": "1.0",
-  "description": "Replaces all fonts on the current page with OCR-A for better OCR accuracy",
+  "name": "Finish IT bridge",
+  "version": "2.0",
+  "description": "Reads the live Scolia scores out of the page and pushes them to the local Finish IT app (no OCR). Also injects OCR-A as a fallback.",
   "permissions": ["activeTab"],
+  "host_permissions": [
+    "http://127.0.0.1:5000/*",
+    "http://localhost:5000/*"
+  ],
   "action": {
     "default_popup": "popup.html"
   },
