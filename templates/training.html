@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Finish IT - Training</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #111;
+      --card:    #1a1a1a;
+      --card-2:  #202020;
+      --line:    #252525;
+      --line-2:  #303030;
+      --text:    #fff;
+      --muted:   #6b6b6b;
+      --muted-2: #999;
+      --accent:  #3dbfa3;
+      --warn:    #f59e0b;
+      --bad:     #ef4444;
+      --good:    #22c55e;
+    }
+
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .num { font-family: 'Oswald', 'Poppins', sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+
+    /* Header */
+    .header {
+      background: var(--bg);
+      padding: 16px 18px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .header-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .header-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .header-title small { color: var(--muted); font-weight: 700; }
+    .header-links { display: flex; gap: 14px; }
+    .header-links a {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); text-decoration: none;
+    }
+    .header-links a:hover { color: var(--accent); }
+
+    /* Live strip */
+    .live-strip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 18px;
+      background: #0c0c0c;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.72rem;
+      position: sticky; top: 47px; z-index: 49;
+    }
+    .pill {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.9;
+    }
+    .pill.push { color: var(--good); }
+    .pill.ocr  { color: var(--warn); }
+    .pill.none { color: #6b7280; }
+    .pill.dead { color: var(--bad); }
+    .live-strip .lbl { color: var(--muted); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.6rem; }
+    .live-strip .val { font-family: 'Oswald', sans-serif; font-size: 1.05rem; font-weight: 700; }
+    .live-strip .spacer { flex: 1; }
+
+    /* Content */
+    .content { padding: 14px 14px 60px; max-width: 620px; margin: 0 auto; }
+
+    /* Tabs */
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 16px; }
+    .tab {
+      background: var(--card); border: 1px solid var(--line); color: var(--muted-2);
+      border-radius: 10px; padding: 9px 4px; cursor: pointer; font-family: inherit;
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .tab:hover { color: #fff; }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #06231d; }
+
+    /* Cards */
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 16px; padding: 16px; margin-bottom: 12px;
+    }
+    .card-label {
+      font-size: 0.64rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px;
+    }
+    .card h2 { font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; }
+    .card p.sub { font-size: 0.8rem; color: var(--muted-2); line-height: 1.5; }
+    .hint {
+      font-size: 0.74rem; color: var(--muted-2); line-height: 1.5;
+      background: #151515; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+      border-radius: 8px; padding: 9px 11px; margin: 12px 0;
+    }
+    .hint b { color: #fff; font-weight: 700; }
+
+    /* Buttons */
+    .btn {
+      font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      border-radius: 10px; padding: 11px 18px; cursor: pointer;
+      background: var(--card-2); border: 1px solid var(--line-2); color: #fff;
+      transition: background .12s, border-color .12s, opacity .12s;
+    }
+    .btn:hover { border-color: #454545; }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #06231d; }
+    .btn.primary:hover { background: #46d6b7; }
+    .btn.danger { color: #fca5a5; border-color: #452020; }
+    .btn.wide { width: 100%; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Segmented option control */
+    .opt-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .opt-label {
+      font-size: 0.66rem; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.08em; text-transform: uppercase; min-width: 92px;
+    }
+    .seg { display: inline-flex; background: #141414; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; }
+    .seg button {
+      font-family: inherit; font-size: 0.76rem; font-weight: 700; color: var(--muted-2);
+      background: none; border: none; padding: 7px 13px; cursor: pointer;
+    }
+    .seg button.active { background: var(--accent); color: #06231d; }
+
+    /* Big live readout */
+    .big-wrap { text-align: center; padding: 6px 0 12px; }
+    .big-label {
+      font-size: 0.64rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .big {
+      font-family: 'Oswald', sans-serif; font-size: 5.4rem; font-weight: 700;
+      line-height: 1; letter-spacing: -0.02em; margin: 2px 0 0;
+    }
+    .big.dim { color: #2c2c2c; }
+
+    /* The three targets of a round, thrown in order, left to right. */
+    .seq { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 0 0; }
+    .seq .n {
+      font-family: 'Oswald', sans-serif; font-size: 3.4rem; font-weight: 700; line-height: 1;
+      min-width: 1.7em; padding: 2px 6px; border-radius: 12px;
+      border: 2px solid var(--line); background: #141414;
+    }
+    .seq .n.hit  { border-color: var(--accent); background: #10231f; color: var(--accent); }
+    .seq .n.miss { border-color: #3a1c1c; background: #1a1010; color: #6b4a4a; }
+    .seq .arrow { color: #333; font-size: 1.1rem; }
+    @media (max-width: 430px) { .seq .n { font-size: 2.6rem; } }
+    .big-sub { font-size: 0.78rem; color: var(--muted-2); margin-top: 6px; min-height: 1.2em; }
+
+    /* Stat grid */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+    .stat { background: #151515; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+    .stat .k {
+      font-size: 0.57rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .stat .v { font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 700; margin-top: 1px; }
+    .stat .v small { font-size: 0.72rem; color: var(--muted-2); font-family: 'Poppins', sans-serif; font-weight: 600; }
+    .stat.hero { background: #10231f; border-color: #1c4038; }
+    .stat.hero .v { color: var(--accent); }
+
+    /* Progress bar */
+    .bar { height: 7px; background: #161616; border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+    .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .25s; }
+
+    /* Throw / leg lists */
+    .rows { display: flex; flex-direction: column; gap: 4px; max-height: 270px; overflow-y: auto; }
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      background: #151515; border: 1px solid var(--line); border-radius: 8px;
+      padding: 7px 11px; font-size: 0.8rem;
+    }
+    .row .idx { font-size: 0.62rem; font-weight: 800; color: var(--muted); min-width: 22px; }
+    .row .main { flex: 1; font-family: 'Oswald', sans-serif; font-size: 1.05rem; font-weight: 700; }
+    .row .meta { color: var(--muted-2); font-size: 0.72rem; }
+    .row.hot    { border-color: #4a3a12; background: #1c1608; }
+    .row.hotter { border-color: #5a2f10; background: #211208; }
+    .row.max    { border-color: #1c4038; background: #10231f; }
+    .row.pending { opacity: .55; border-style: dashed; }
+
+    /* Hit tagger */
+    .tagger { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .tagger .t-label { font-size: 0.66rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+    .tag-btn {
+      font-family: 'Oswald', sans-serif; font-size: 1.15rem; font-weight: 700;
+      width: 44px; height: 40px; border-radius: 9px; cursor: pointer;
+      background: #141414; border: 1px solid var(--line-2); color: #fff;
+    }
+    .tag-btn.active { background: var(--accent); border-color: var(--accent); color: #06231d; }
+    .tag-btn:disabled { opacity: .3; cursor: default; }
+
+    /* Distribution bars */
+    .dist { display: flex; align-items: flex-end; gap: 3px; height: 92px; margin-top: 8px; }
+    .dist .d { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+    .dist .d i { display: block; width: 100%; background: #2a4a44; border-radius: 3px 3px 0 0; min-height: 2px; }
+    .dist .d.on i { background: var(--accent); }
+    .dist .d span { font-size: 0.52rem; color: var(--muted); font-weight: 700; }
+
+    /* Charts / tables */
+    .chart { width: 100%; height: auto; display: block; overflow: visible; }
+    table.grid { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    table.grid th {
+      text-align: left; font-size: 0.57rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 7px;
+      border-bottom: 1px solid var(--line-2);
+    }
+    table.grid td { padding: 6px 7px; border-bottom: 1px solid #191919; }
+    table.grid td.n { font-family: 'Oswald', sans-serif; font-size: 0.95rem; font-weight: 700; }
+    .empty { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 22px 10px; line-height: 1.6; }
+
+    .sess {
+      display: flex; align-items: center; gap: 11px;
+      background: #151515; border: 1px solid var(--line); border-radius: 10px;
+      padding: 9px 12px; margin-bottom: 6px;
+    }
+    .sess .when { font-size: 0.68rem; color: var(--muted); min-width: 92px; }
+    .sess .head { flex: 1; }
+    .sess .head b { font-family: 'Oswald', sans-serif; font-size: 1.25rem; font-weight: 700; }
+    .sess .head span { font-size: 0.7rem; color: var(--muted-2); margin-left: 7px; }
+    .sess .pb { font-size: 0.55rem; font-weight: 800; letter-spacing: .1em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 7px; }
+    .sess .del { background: none; border: none; color: #444; cursor: pointer; font-size: 1rem; padding: 2px 4px; line-height: 1; }
+    .sess .del:hover { color: var(--bad); }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+      background: #0d2b25; border: 1px solid #1c4038; color: var(--accent);
+      padding: 10px 18px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+      opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 200;
+    }
+    .toast.show { opacity: 1; }
+
+    [hidden] { display: none !important; }
+    @media (max-width: 420px) {
+      .big { font-size: 4.2rem; }
+      .live-strip { font-size: 0.66rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-dot"></div>
+    <span class="header-title">Finish IT <small>/ Training</small></span>
+  </div>
+  <div class="header-links">
+    <a href="/">Outshot</a>
+    <a href="/finishes">Finishes</a>
+  </div>
+</div>
+
+<div class="live-strip">
+  <span id="srcPill" class="pill none">no feed</span>
+  <span class="lbl">Board</span><span id="boardScore" class="val">&mdash;</span>
+  <span class="spacer"></span>
+  <span class="lbl">Field</span><span id="boardField" class="val">&mdash;</span>
+</div>
+
+<div class="content">
+
+  <div class="tabs">
+    <button class="tab active" data-tab="m301">301</button>
+    <button class="tab" data-tab="mlegs">10 &times; 101</button>
+    <button class="tab" data-tab="mrand">Random 20</button>
+    <button class="tab" data-tab="prog">Progress</button>
+  </div>
+
+  <!-- ============ 301 ============ -->
+  <section id="tab-m301">
+    <div class="card" id="m301-setup">
+      <h2>301 darts</h2>
+      <p class="sub">A fixed block of darts at whatever you want to score on. Nothing to finish, nothing to bust &mdash; what comes out at the end is your 3-dart average over the block.</p>
+      <div class="hint">Set the Scolia board to <b>9999</b> so the leg never ends. Every visit then shows up here as a drop in the remaining score.</div>
+      <div class="opt-row">
+        <span class="opt-label">Block</span>
+        <div class="seg" id="m301-block">
+          <button data-v="100">100</button>
+          <button data-v="301" class="active">301</button>
+          <button data-v="601">601</button>
+        </div>
+        <span class="opt-label" style="min-width:0">darts</span>
+      </div>
+      <button class="btn primary wide" id="m301-start">Start</button>
+    </div>
+
+    <div class="card" id="m301-live" hidden>
+      <div class="big-wrap">
+        <div class="big-label">3-dart average</div>
+        <div class="big num dim" id="m301-avgbig">&mdash;</div>
+        <div class="big-sub" id="m301-sub">waiting for your first throw&hellip;</div>
+      </div>
+      <div class="bar"><i id="m301-bar" style="width:0%"></i></div>
+      <div class="stats" style="margin-top:12px">
+        <div class="stat hero"><div class="k">Darts left</div><div class="v" id="m301-left">301</div></div>
+        <div class="stat"><div class="k">Scored</div><div class="v" id="m301-scored">0</div></div>
+        <div class="stat"><div class="k">Best</div><div class="v" id="m301-best">&mdash;</div></div>
+        <div class="stat"><div class="k">100+</div><div class="v" id="m301-tons">0</div></div>
+        <div class="stat"><div class="k">140+</div><div class="v" id="m301-t140">0</div></div>
+        <div class="stat"><div class="k">180s</div><div class="v" id="m301-t180">0</div></div>
+        <div class="stat"><div class="k">Time</div><div class="v" id="m301-time">0:00</div></div>
+      </div>
+      <div class="card-label" style="margin:16px 0 8px">Throws</div>
+      <div class="rows" id="m301-rows"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn danger" id="m301-abort">Abandon</button>
+        <button class="btn" id="m301-zero">Nothing scored</button>
+        <button class="btn" id="m301-undo">Undo last throw</button>
+      </div>
+    </div>
+
+    <div class="card" id="m301-done" hidden></div>
+  </section>
+
+  <!-- ============ 10 x 101 ============ -->
+  <section id="tab-mlegs" hidden>
+    <div class="card" id="mlegs-setup">
+      <h2>10 legs of 101</h2>
+      <p class="sub">A real leg every time: 101 down to nothing on a double. The number that matters is your average darts per leg.</p>
+      <div class="hint">Set the Scolia board to <b>101</b> and let it run the legs properly. A leg counts the moment the board reads <b>0</b>.</div>
+      <div class="opt-row">
+        <span class="opt-label">Legs</span>
+        <div class="seg" id="mlegs-count">
+          <button data-v="5">5</button>
+          <button data-v="10" class="active">10</button>
+          <button data-v="20">20</button>
+        </div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">Start</span>
+        <div class="seg" id="mlegs-startscore">
+          <button data-v="101" class="active">101</button>
+          <button data-v="121">121</button>
+          <button data-v="170">170</button>
+        </div>
+      </div>
+      <button class="btn primary wide" id="mlegs-start">Start</button>
+    </div>
+
+    <div class="card" id="mlegs-live" hidden>
+      <div class="big-wrap">
+        <div class="big-label" id="mlegs-legno">Leg 1 of 10</div>
+        <div class="big num" id="mlegs-remaining">101</div>
+        <div class="big-sub" id="mlegs-sub">waiting for your first throw&hellip;</div>
+      </div>
+      <div class="bar"><i id="mlegs-bar" style="width:0%"></i></div>
+      <div class="stats" style="margin-top:12px">
+        <div class="stat hero"><div class="k">Darts / leg</div><div class="v" id="mlegs-avg">&mdash;</div></div>
+        <div class="stat"><div class="k">This leg</div><div class="v" id="mlegs-cur">0</div></div>
+        <div class="stat"><div class="k">Best leg</div><div class="v" id="mlegs-best">&mdash;</div></div>
+        <div class="stat"><div class="k">Busts</div><div class="v" id="mlegs-busts">0</div></div>
+        <div class="stat"><div class="k">Time</div><div class="v" id="mlegs-time">0:00</div></div>
+      </div>
+      <div class="tagger" id="mlegs-tagger" hidden>
+        <span class="t-label">Darts on the winning visit</span>
+        <button class="tag-btn" data-v="1">1</button>
+        <button class="tag-btn" data-v="2">2</button>
+        <button class="tag-btn" data-v="3">3</button>
+      </div>
+      <div class="card-label" style="margin:16px 0 8px">Legs</div>
+      <div class="rows" id="mlegs-rows"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn danger" id="mlegs-abort">Abandon</button>
+        <button class="btn" id="mlegs-zero">Nothing scored</button>
+        <button class="btn" id="mlegs-skip">Leg done &rarr;</button>
+      </div>
+    </div>
+
+    <div class="card" id="mlegs-done" hidden></div>
+  </section>
+
+  <!-- ============ Random 20 ============ -->
+  <section id="tab-mrand" hidden>
+    <div class="card" id="mrand-setup">
+      <h2>Random 20 &mdash; three-dart sequence</h2>
+      <p class="sub">Three numbers appear. One dart at each, in the order shown &mdash; the switch between beds is the skill, not repeating the same number. The numbers you actually meet in a game come up far more often than the ones you never aim at.</p>
+      <div class="hint">Set the Scolia board to <b>9999</b>. Each visit scores the round and turns over the next sequence.</div>
+      <div class="opt-row">
+        <span class="opt-label">Rounds</span>
+        <div class="seg" id="mrand-rounds">
+          <button data-v="10">10</button>
+          <button data-v="20" class="active">20</button>
+          <button data-v="40">40</button>
+        </div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">Draw</span>
+        <div class="seg" id="mrand-dist">
+          <button data-v="practice" class="active">Practice</button>
+          <button data-v="pro">Pro</button>
+          <button data-v="even">Even</button>
+        </div>
+      </div>
+      <div class="card-label" style="margin:14px 0 0">How often each number comes up</div>
+      <p class="sub" id="mrand-distnote" style="margin:2px 0 0"></p>
+      <div class="dist" id="mrand-distchart"></div>
+      <button class="btn primary wide" id="mrand-start" style="margin-top:14px">Start</button>
+    </div>
+
+    <div class="card" id="mrand-live" hidden>
+      <div class="big-wrap">
+        <div class="big-label" id="mrand-roundno">Round 1 of 20</div>
+        <div class="seq num" id="mrand-target"></div>
+        <div class="big-sub" id="mrand-sub">one dart at each, in order &mdash; waiting for the board&hellip;</div>
+      </div>
+      <div class="bar"><i id="mrand-bar" style="width:0%"></i></div>
+      <div class="tagger" id="mrand-tagger">
+        <span class="t-label">Which ones you hit</span>
+        <button class="tag-btn" data-i="0">&mdash;</button>
+        <button class="tag-btn" data-i="1">&mdash;</button>
+        <button class="tag-btn" data-i="2">&mdash;</button>
+        <button class="tag-btn" data-none="1">None</button>
+        <span class="t-label" id="mrand-taghint" style="letter-spacing:0;text-transform:none">tags the round just thrown &mdash; keys 1&ndash;3, 0 for none</span>
+      </div>
+      <div class="stats" style="margin-top:12px">
+        <div class="stat hero"><div class="k">Hit rate</div><div class="v" id="mrand-hitrate">&mdash;</div></div>
+        <div class="stat"><div class="k">Avg pts</div><div class="v" id="mrand-avg">&mdash;</div></div>
+        <div class="stat"><div class="k">Last</div><div class="v" id="mrand-last">&mdash;</div></div>
+        <div class="stat"><div class="k">Time</div><div class="v" id="mrand-time">0:00</div></div>
+      </div>
+      <div class="card-label" style="margin:16px 0 8px">Rounds</div>
+      <div class="rows" id="mrand-rows"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn danger" id="mrand-abort">Abandon</button>
+        <button class="btn" id="mrand-zero">Nothing scored</button>
+        <button class="btn" id="mrand-skip">Skip round</button>
+      </div>
+    </div>
+
+    <div class="card" id="mrand-done" hidden></div>
+  </section>
+
+  <!-- ============ Progress ============ -->
+  <section id="tab-prog" hidden>
+    <div class="tabs" style="grid-template-columns:repeat(3,1fr)">
+      <button class="tab active" data-prog="301">301</button>
+      <button class="tab" data-prog="legs101">10 &times; 101</button>
+      <button class="tab" data-prog="random20">Random 20</button>
+    </div>
+    <div id="prog-body"></div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   Small helpers
+   ========================================================================= */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const fmtTime = s => {
+  s = Math.max(0, Math.round(s));
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+};
+const fmtDate = ts => {
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short" }) + " " +
+         d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+};
+const round1 = v => Math.round(v * 10) / 10;
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+/* Wire a segmented control; returns a getter for the current value. */
+function segment(sel, onChange) {
+  const box = $(sel);
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    box.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+    if (onChange) onChange(b.dataset.v);
+  });
+  return () => (box.querySelector("button.active") || {}).dataset.v;
+}
+
+/* =========================================================================
+   The board feed
+   -------------------------------------------------------------------------
+   /api/throws hands out score *changes* with a monotonic id, so nothing is
+   missed between polls and a reload just picks up where it left off.
+
+   Whether Scolia updates its counter once per dart or once per visit is not
+   something we can know from the numbers alone, so the grouper does not try
+   to: it closes a visit on the gap between changes. Within a visit darts land
+   a second or so apart; between visits there is always the walk to the board
+   and "removing darts". Either board behaviour therefore lands on the same
+   visits. A change over 60 has to be a whole visit anyway, so it closes at
+   once.
+   ========================================================================= */
+const POLL_MS   = 400;
+const MAX_DART  = 60;    // the most one dart can score
+const PERVISIT_KEY = "finishit.training.pervisit";
+
+// How long a quiet spell has to be before it closes a visit -- and it depends
+// on which reader the feed is coming from, because that is what decides how
+// fast a dart shows up, not how fast it was thrown.
+//
+//   push  the extension reads the DOM every 250 ms, so the three darts of a
+//         visit arrive about a second apart, exactly as they landed.
+//   ocr   a screen pass costs a second or three, and a score is only accepted
+//         after two passes agree -- so darts inside one visit surface four to
+//         six seconds apart. Measured against a real session, that is *over*
+//         the fast threshold, which used to close a visit after every single
+//         dart: the 301 block then counted one dart as a visit and reported
+//         the per-dart average (15.7) where the 3-dart average (47) belongs.
+//
+// The walk to the board is what separates real visits, and on the same session
+// that gap never fell below 14 s, so the slow threshold has room either way.
+const VISIT_GAP_FAST = 4.0;
+const VISIT_GAP_SLOW = 9.0;
+
+function visitGap() { return feed.source === "ocr" ? VISIT_GAP_SLOW : VISIT_GAP_FAST; }
+
+const feed = {
+  seq: -1,
+  score: null,
+  field: null,
+  source: "none",
+  alive: false,
+  pending: null,          // visit being built: {points, changes, first, last}
+  lastChangeTs: 0,        // when the previous change landed, pending or not
+  onVisit: null,          // (visit) => void
+  onReset: null,          // (event) => void
+  onPending: null,        // (visit|null) => void
+  onPoll: null,           // () => void
+
+  // Whether the board reports a whole visit at a time rather than each dart.
+  // Unknowable from a single reading, but a change over 60 settles it -- one
+  // dart cannot score that. Once known, the gap heuristic is dropped entirely
+  // and every change is a visit the instant it lands, so the page stops
+  // waiting for the quiet spell to be sure. Remembered per browser.
+  //
+  // Only ever concluded from a feed that does not drop readings. On the OCR
+  // path two darts routinely land between passes and surface as one change,
+  // and a merged 20 + 60 is indistinguishable from a visit of 80 -- latching
+  // on that would turn every later dart into its own "visit" for good, in
+  // every session, until localStorage was cleared by hand.
+  perVisit: (() => { try { return localStorage.getItem(PERVISIT_KEY) === "1"; } catch (e) { return false; } })(),
+};
+
+function feedFlush() {
+  const v = feed.pending;
+  feed.pending = null;
+  if (v && feed.onVisit) feed.onVisit(v);
+  if (feed.onPending) feed.onPending(null);
+}
+
+function setPerVisit(on) {
+  feed.perVisit = on;
+  try { localStorage.setItem(PERVISIT_KEY, on ? "1" : "0"); } catch (err) { /* private window */ }
+}
+
+function feedChange(e) {
+  const gap = visitGap();
+  const p   = feed.pending;
+
+  if (e.points > MAX_DART && !feed.perVisit && feed.source !== "ocr") {
+    setPerVisit(true);
+  } else if (feed.perVisit && feed.lastChangeTs && e.ts - feed.lastChangeTs <= gap) {
+    // Two changes closer together than the walk to the board: whatever this
+    // board is doing, it is not one change per visit. Undoes a latch that a
+    // merged reading (or a board swapped since) got wrong, which otherwise
+    // outlived the session it was learned in. Read off lastChangeTs rather
+    // than the pending visit, because in per-visit mode there is never a
+    // pending visit to compare against -- every change is flushed on arrival.
+    //
+    // The change that proves it has already been counted as a visit of its
+    // own, so the visit it really belonged to comes out split. That happens
+    // once, at the moment the mistake is caught.
+    setPerVisit(false);
+  }
+
+  if (p && (feed.perVisit || e.ts - p.last > gap || p.changes.length >= 3)) feedFlush();
+  if (!feed.pending) feed.pending = { points: 0, changes: [], first: e.ts, last: e.ts };
+  const v = feed.pending;
+  v.points += e.points;
+  v.changes.push(e.points);
+  v.last = e.ts;
+  v.after = e.after;
+  feed.lastChangeTs = e.ts;
+  if (feed.perVisit || v.changes.length >= 3) feedFlush();
+  else if (feed.onPending) feed.onPending(v);
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/throws?since=" + feed.seq, { cache: "no-store" });
+    const d = await r.json();
+    feed.alive  = true;
+    feed.score  = d.score;
+    feed.field  = d.field;
+    feed.source = d.source;
+    // The reader emits an event per field, and the extension pushes the same
+    // number to both fields whenever Scolia is showing one player. Taking only
+    // the selected field is what stops every throw being counted twice.
+    for (const e of d.events) {
+      if (e.field !== d.field) continue;
+      if (e.kind === "throw") feedChange(e);
+      else { feedFlush(); if (feed.onReset) feed.onReset(e); }
+    }
+    // Nothing has arrived for a while: whatever was half-built is a visit.
+    if (feed.pending && d.updated_ts - feed.pending.last > visitGap()) feedFlush();
+    feed.seq = d.seq;
+  } catch (err) {
+    feed.alive = false;
+  }
+  paintStrip();
+  if (feed.onPoll) feed.onPoll();
+}
+
+function paintStrip() {
+  const pill = $("#srcPill");
+  const kind = !feed.alive ? "dead" : (feed.source || "none");
+  pill.className = "pill " + kind;
+  pill.textContent = !feed.alive ? "app offline"
+                   : kind === "push" ? "extension"
+                   : kind === "ocr"  ? "screen ocr" : "no feed";
+  $("#boardScore").textContent = feed.score == null ? "—" : feed.score;
+  $("#boardField").textContent = feed.field == null ? "—" : feed.field;
+}
+
+setInterval(poll, POLL_MS);
+poll();
+
+/* =========================================================================
+   Session store
+   ========================================================================= */
+let sessions = [];
+
+async function loadSessions() {
+  try {
+    const d = await (await fetch("/api/training/sessions", { cache: "no-store" })).json();
+    sessions = d.sessions || [];
+  } catch (e) {
+    sessions = [];
+  }
+}
+
+async function saveSession(mode, startedTs, stats, detail) {
+  const body = {
+    mode, stats, detail,
+    started_ts: startedTs,
+    ended_ts: Date.now() / 1000,
+  };
+  try {
+    const d = await (await fetch("/api/training/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })).json();
+    if (d.ok) { sessions.push(d.session); toast("Session saved"); return d.session; }
+    toast("Could not save: " + (d.message || "?"));
+  } catch (e) {
+    toast("Could not save — app not reachable");
+  }
+  return null;
+}
+
+async function deleteSession(id) {
+  try {
+    await fetch("/api/training/sessions/" + id, { method: "DELETE" });
+    sessions = sessions.filter(s => s.id !== id);
+  } catch (e) { /* leave the list as it is */ }
+}
+
+/* =========================================================================
+   Mode plumbing: only one drill runs at a time, and it owns the feed.
+   ========================================================================= */
+let active = null;   // the running mode object, or null
+
+function busy(mode) {
+  if (active && active !== mode) {
+    toast("Finish or abandon the " + active.mode + " session first");
+    return true;
+  }
+  return false;
+}
+
+function claimFeed(mode) {
+  active = mode;
+  feed.pending  = null;
+  feed.onVisit  = v => { if (active === mode) mode.onVisit(v); };
+  feed.onReset  = e => { if (active === mode && mode.onReset) mode.onReset(e); };
+  feed.onPending= v => { if (active === mode && mode.onPending) mode.onPending(v); };
+  feed.onPoll   = () => { if (active === mode && mode.onPoll) mode.onPoll(); };
+}
+
+function releaseFeed() {
+  active = null;
+  feed.onVisit = feed.onReset = feed.onPending = feed.onPoll = null;
+  feed.pending = null;
+}
+
+function show(id, on) { $(id).hidden = !on; }
+
+/* Rebuild a list only when its contents changed.
+   render() runs on every poll so the clock stays live; without this the rows
+   would be thrown away and rebuilt 2.5 times a second, which resets the
+   scroll position under your finger. */
+function repaint(container, sig, build) {
+  if (container.dataset.sig === sig) return;
+  container.dataset.sig = sig;
+  container.textContent = "";
+  build(container);
+}
+
+/* A row for a throw list, coloured by how big the score was. */
+function throwRow(idx, points, meta, pending) {
+  const cls = pending ? "row pending"
+            : points >= 180 ? "row max"
+            : points >= 140 ? "row hotter"
+            : points >= 100 ? "row hot" : "row";
+  const r = el("div", cls);
+  r.appendChild(el("span", "idx", "#" + idx));
+  r.appendChild(el("span", "main", String(points)));
+  if (meta) r.appendChild(el("span", "meta", meta));
+  return r;
+}
+
+/* =========================================================================
+   Mode 1 -- a fixed block of darts
+   -------------------------------------------------------------------------
+   Not a countdown: you throw a set number of darts at whatever you like and
+   the block tells you what you average. Board on 9999 so nothing ever ends.
+
+   Every visit counts as three darts whatever the board reports, and that is
+   deliberate. A dart that scores nothing -- a miss, a bounce-out -- changes
+   the remaining score by zero and so produces no event at all. Counting the
+   events that did arrive would quietly drop those darts and flatter the
+   average; counting three per visit absorbs them. The one case that stays
+   invisible is a whole visit that scores nothing, which is what the "Nothing
+   scored" button is for.
+   ========================================================================= */
+const DARTS_PER_VISIT = 3;
+
+const m301 = {
+  mode: "301",
+  block: 301,
+  running: false,
+  started: 0,
+  visits: [],
+  lastPoints: null,
+
+  start() {
+    if (busy(this)) return;
+    this.block   = parseInt(get301Block(), 10);
+    this.running = true;
+    this.started = Date.now() / 1000;
+    this.visits  = [];
+    this.lastPoints = null;
+    claimFeed(this);
+    show("#m301-setup", false);
+    show("#m301-done", false);
+    show("#m301-live", true);
+    this.render();
+  },
+
+  scored() { return this.visits.reduce((a, v) => a + v.points, 0); },
+  darts()  { return this.visits.length * DARTS_PER_VISIT; },
+
+  onVisit(v) { this.add(v.points); },
+
+  add(points) {
+    if (!this.running) return;
+    this.visits.push({ points, ts: Date.now() / 1000 });
+    this.lastPoints = points;
+    this.render();
+    // The block is set in darts but thrown in visits of three, so the last
+    // visit usually carries it past the number. Overshooting is the honest
+    // way round -- you have thrown at least the block -- and the average is
+    // taken over the darts actually thrown.
+    if (this.darts() >= this.block) this.finish();
+  },
+
+  onPending() { this.render(); },
+  onPoll()    { this.render(); },
+
+  render() {
+    const scored = this.scored();
+    const n      = this.visits.length;
+    const darts  = this.darts();
+    const avg    = n ? round1(scored / n) : null;
+
+    $("#m301-avgbig").textContent = avg == null ? "—" : avg;
+    $("#m301-avgbig").classList.toggle("dim", avg == null);
+    $("#m301-sub").textContent = n
+      ? (this.lastPoints == null ? "" : "last throw " + this.lastPoints + " · ") +
+        darts + " of " + this.block + " darts"
+      : "waiting for your first throw…";
+    $("#m301-bar").style.width = clamp(darts / this.block * 100, 0, 100) + "%";
+    $("#m301-left").textContent   = Math.max(0, this.block - darts);
+    $("#m301-scored").textContent = scored;
+    $("#m301-best").textContent   = n ? Math.max(...this.visits.map(v => v.points)) : "—";
+    $("#m301-tons").textContent   = this.visits.filter(v => v.points >= 100).length;
+    $("#m301-t140").textContent   = this.visits.filter(v => v.points >= 140).length;
+    $("#m301-t180").textContent   = this.visits.filter(v => v.points === 180).length;
+    $("#m301-time").textContent   = fmtTime(Date.now() / 1000 - this.started);
+
+    const rows = $("#m301-rows");
+    const sig = this.visits.map(v => v.points).join(",") + "|" + (feed.pending ? feed.pending.points : "");
+    repaint(rows, sig, box => {
+      this.visits.slice().reverse().forEach((v, i) => {
+        box.appendChild(throwRow(n - i, v.points));
+      });
+      if (feed.pending) box.insertBefore(throwRow(n + 1, feed.pending.points, "throwing…", true), box.firstChild);
+    });
+  },
+
+  undo() {
+    if (!this.visits.length) return;
+    this.visits.pop();
+    this.lastPoints = this.visits.length ? this.visits[this.visits.length - 1].points : null;
+    this.render();
+  },
+
+  async finish(abandoned) {
+    if (!this.running) return;
+    this.running = false;
+    releaseFeed();
+    show("#m301-live", false);
+
+    const scored = this.scored();
+    const n      = this.visits.length;
+    const darts  = this.darts();
+    const dur    = Date.now() / 1000 - this.started;
+    const stats = {
+      block: this.block,
+      darts,
+      throws: n,
+      scored,
+      avg3: n ? round1(scored / n) : 0,
+      ppd: darts ? Math.round(scored / darts * 100) / 100 : 0,
+      best: n ? Math.max(...this.visits.map(v => v.points)) : 0,
+      tons: this.visits.filter(v => v.points >= 100).length,
+      t140: this.visits.filter(v => v.points >= 140).length,
+      t180: this.visits.filter(v => v.points === 180).length,
+      duration_s: Math.round(dur),
+      complete: !abandoned && darts >= this.block,
+    };
+
+    const box = $("#m301-done");
+    box.hidden = false;
+    box.textContent = "";
+    box.appendChild(el("div", "card-label",
+      abandoned ? "Abandoned after " + darts + " darts" : "Done — " + darts + " darts"));
+    box.appendChild(summaryGrid([
+      ["3-dart avg", stats.avg3, true],
+      ["Scored", stats.scored],
+      ["Per dart", stats.ppd],
+      ["Best", stats.best],
+      ["100+", stats.tons],
+      ["140+", stats.t140],
+      ["180s", stats.t180],
+      ["Time", fmtTime(dur)],
+    ]));
+    if (!abandoned && n) {
+      const saved = await saveSession("301", this.started, stats, this.visits.map(v => v.points));
+      if (saved) box.appendChild(pbNote("301", saved));
+    }
+    const again = el("button", "btn primary wide", "Throw another block");
+    again.style.marginTop = "14px";
+    again.onclick = () => { show("#m301-done", false); show("#m301-setup", true); };
+    box.appendChild(again);
+    show("#m301-setup", false);
+  },
+};
+
+const get301Block = segment("#m301-block");
+$("#m301-start").onclick = () => m301.start();
+$("#m301-abort").onclick = () => m301.finish(true);
+$("#m301-undo").onclick  = () => m301.undo();
+$("#m301-zero").onclick  = () => m301.add(0);
+
+/* =========================================================================
+   Mode 2 -- ten legs of 101
+   -------------------------------------------------------------------------
+   Scolia runs these legs for real, so the board itself enforces the double
+   and the bust. All this has to do is watch: throws come off the feed, the
+   leg is over when the board reads 0, and the next one starts when the score
+   climbs back up.
+
+   A bust mid-leg also shows as the score climbing -- Scolia puts it back --
+   which is why a rise is only a new leg once the leg has actually been won.
+   ========================================================================= */
+const mlegs = {
+  mode: "legs101",
+  running: false,
+  started: 0,
+  legCount: 10,
+  startScore: 101,
+  legs: [],          // {darts, throws, busts, ts}
+  curThrows: 0,
+  curBusts: 0,
+  awaitingReset: false,    // leg won, waiting for the board to come back up
+  awaitingFinish: false,   // last leg thrown, waiting for you to tag and finish
+  busts: 0,
+
+  start() {
+    if (busy(this)) return;
+    this.legCount   = parseInt(getLegCount(), 10);
+    this.startScore = parseInt(getLegStart(), 10);
+    this.running    = true;
+    this.started    = Date.now() / 1000;
+    this.legs       = [];
+    this.curThrows  = 0;
+    this.curBusts   = 0;
+    this.busts      = 0;
+    this.awaitingReset = false;
+    this.awaitingFinish = false;
+    $("#mlegs-skip").textContent = "Leg done →";
+    show("#mlegs-tagger", false);   // a tagger left over from the last session
+    claimFeed(this);
+    show("#mlegs-setup", false);
+    show("#mlegs-done", false);
+    show("#mlegs-live", true);
+    $("#mlegs-sub").textContent = "waiting for your first throw…";
+    this.render();
+  },
+
+  onVisit(v) {
+    if (!this.running || this.awaitingReset || this.awaitingFinish) return;
+    this.curThrows++;
+    $("#mlegs-sub").textContent = "last throw " + v.points;
+    // The board reading zero is the only marker that fires exactly once per
+    // leg, so that -- not any UI label -- is what closes it.
+    if (v.after === 0) this.closeLeg(3);
+    this.render();
+  },
+
+  onReset(e) {
+    if (!this.running) return;
+    if (this.awaitingReset) {
+      // Board is back up: the next leg is live.
+      this.awaitingReset = false;
+      $("#mlegs-sub").textContent = "next leg — throw when ready";
+    } else if (e.after <= this.startScore) {
+      // Score went back up mid-leg: Scolia reverted a bust.
+      this.curThrows++;
+      this.curBusts++;
+      this.busts++;
+      $("#mlegs-sub").textContent = "bust";
+    }
+    this.render();
+  },
+
+  onPoll() { this.render(); },
+
+  /* Close the current leg. `darts` is how many darts the winning visit used. */
+  closeLeg(winningDarts) {
+    if (!this.curThrows) return;
+    this.legs.push({
+      throws: this.curThrows,
+      darts: (this.curThrows - 1) * 3 + winningDarts,
+      busts: this.curBusts,
+      ts: Date.now() / 1000,
+    });
+    this.curThrows = 0;
+    this.curBusts  = 0;
+    this.awaitingReset = true;
+    show("#mlegs-tagger", true);
+    $$("#mlegs-tagger .tag-btn").forEach(b => b.classList.toggle("active", b.dataset.v === "3"));
+
+    // The last leg does not end the session on its own: the winning visit is
+    // assumed to be three darts until you say otherwise, and once the results
+    // card is up there is nowhere left to say it.
+    if (this.legs.length >= this.legCount) {
+      this.awaitingFinish = true;
+      $("#mlegs-skip").textContent = "Finish session";
+      $("#mlegs-sub").textContent = "all " + this.legCount + " legs thrown — tag the last visit, then finish";
+    }
+  },
+
+  /* Retag the darts used on the last leg's winning visit. */
+  tag(darts) {
+    const leg = this.legs[this.legs.length - 1];
+    if (!leg) return;
+    leg.darts = (leg.throws - 1) * 3 + darts;
+    $$("#mlegs-tagger .tag-btn").forEach(b => b.classList.toggle("active", +b.dataset.v === darts));
+    this.render();
+  },
+
+  render() {
+    const done = this.legs.length;
+    const dartsList = this.legs.map(l => l.darts);
+    const avg  = done ? round1(dartsList.reduce((a, b) => a + b, 0) / done) : null;
+    const best = done ? Math.min(...dartsList) : null;
+
+    $("#mlegs-legno").textContent = "Leg " + Math.min(done + 1, this.legCount) + " of " + this.legCount;
+    $("#mlegs-remaining").textContent = feed.score == null ? "—" : feed.score;
+    $("#mlegs-bar").style.width = (done / this.legCount * 100) + "%";
+    $("#mlegs-avg").textContent   = avg == null ? "—" : avg;
+    $("#mlegs-cur").textContent   = this.curThrows * 3;
+    $("#mlegs-best").textContent  = best == null ? "—" : best;
+    $("#mlegs-busts").textContent = this.busts;
+    $("#mlegs-time").textContent  = fmtTime(Date.now() / 1000 - this.started);
+
+    const rows = $("#mlegs-rows");
+    const sig = this.legs.map(l => l.darts + "/" + l.throws + "/" + l.busts).join(",");
+    repaint(rows, sig, box => {
+      this.legs.slice().reverse().forEach((l, i) => {
+        const meta = l.throws + " throws" + (l.busts ? ", " + l.busts + " bust" : "");
+        const r = el("div", "row" + (l.darts <= 9 ? " max" : l.darts <= 12 ? " hot" : ""));
+        r.appendChild(el("span", "idx", "L" + (done - i)));
+        r.appendChild(el("span", "main", l.darts + " darts"));
+        r.appendChild(el("span", "meta", meta));
+        box.appendChild(r);
+      });
+    });
+  },
+
+  async finish(abandoned) {
+    if (!this.running) return;
+    this.running = false;
+    releaseFeed();
+    show("#mlegs-live", false);
+
+    const dartsList = this.legs.map(l => l.darts);
+    const total = dartsList.reduce((a, b) => a + b, 0);
+    const dur = Date.now() / 1000 - this.started;
+    const stats = {
+      legs: this.legs.length,
+      legsPlanned: this.legCount,
+      startScore: this.startScore,
+      darts: total,
+      dartsAvg: this.legs.length ? round1(total / this.legs.length) : 0,
+      best: dartsList.length ? Math.min(...dartsList) : 0,
+      worst: dartsList.length ? Math.max(...dartsList) : 0,
+      busts: this.busts,
+      duration_s: Math.round(dur),
+      complete: !abandoned && this.legs.length >= this.legCount,
+    };
+
+    const box = $("#mlegs-done");
+    box.hidden = false;
+    box.textContent = "";
+    box.appendChild(el("div", "card-label", abandoned ? "Abandoned" : "Done — " + this.legs.length + " legs"));
+    box.appendChild(summaryGrid([
+      ["Darts / leg", stats.dartsAvg, true],
+      ["Best leg", stats.best],
+      ["Worst leg", stats.worst],
+      ["Total darts", stats.darts],
+      ["Busts", stats.busts],
+      ["Time", fmtTime(dur)],
+    ]));
+    if (!abandoned && this.legs.length) {
+      const saved = await saveSession("legs101", this.started, stats, dartsList);
+      if (saved) box.appendChild(pbNote("legs101", saved));
+    }
+    const again = el("button", "btn primary wide", "Play again");
+    again.style.marginTop = "14px";
+    again.onclick = () => { show("#mlegs-done", false); show("#mlegs-setup", true); };
+    box.appendChild(again);
+    show("#mlegs-setup", false);
+  },
+};
+
+const getLegCount = segment("#mlegs-count");
+const getLegStart = segment("#mlegs-startscore");
+$("#mlegs-start").onclick = () => mlegs.start();
+$("#mlegs-abort").onclick = () => mlegs.finish(true);
+$("#mlegs-zero").onclick  = () => {
+  if (mlegs.running && !mlegs.awaitingReset && !mlegs.awaitingFinish) {
+    mlegs.curThrows++;
+    $("#mlegs-sub").textContent = "nothing scored";
+    mlegs.render();
+  }
+};
+$("#mlegs-skip").onclick  = () => {
+  if (!mlegs.running) return;
+  if (mlegs.awaitingFinish) mlegs.finish();
+  else if (!mlegs.awaitingReset) mlegs.closeLeg(3);
+};
+$("#mlegs-tagger").addEventListener("click", e => {
+  const b = e.target.closest(".tag-btn");
+  if (b) mlegs.tag(+b.dataset.v);
+});
+
+/* =========================================================================
+   Mode 3 -- a random three-dart sequence
+   -------------------------------------------------------------------------
+   Three numbers a round, one dart at each, in the order shown. Three darts at
+   the same number is a different (easier) skill: the dart that misses tells
+   you where you are, and the next two correct off it. Switching bed every
+   dart is what a real visit does -- 60, then the setup, then the double.
+
+   How often each number comes up is not guesswork any more. PRO_ATTEMPTS is
+   the number of darts aimed at that number by the top 16 professionals over
+   the 2019 season, taken from the dataset behind Haugh & Wang, "An Empirical
+   Bayes Approach for Estimating Skill Models for Professional Darts Players"
+   (arXiv:2302.10750, data at github.com/wangchunsem/OptimalDarts). Their
+   scorers recorded the region each dart was aimed at, so these are intended
+   targets, not where the darts landed. Trebles (T20/T19/T18/T17) and doubles
+   (D1-D20) at the same number are added together; the bull is left out
+   because this drill only draws 1-20.
+
+   Raw, that distribution is brutally top-heavy -- 20 takes 71% of all darts a
+   professional aims, 19 another 16%, and 13 turns up once in three thousand.
+   That is a true picture of match darts and a poor practice hour, so the
+   PRACTICE draw flattens it with a square root (TEMPER), which keeps the
+   order and the rough shape the data gives -- 20, 19, 18, then 17/16/10/8
+   from the finishing doubles, then the rest -- while pulling 20 down to about
+   a third of rounds and giving the numbers nobody practises a real share.
+   PRO draws straight from the counts, for a session that mirrors what the
+   professionals actually throw at.
+   ========================================================================= */
+const PRO_ATTEMPTS = {
+  20: 121939, 19: 27863, 18: 8687, 17: 2479, 16: 2338, 10: 2064,
+   8:   1595, 12:   808,  4:  737,  5:  623,  6:  472,  2:  373,
+   9:    325, 14:   312,  1:  199,  3:  179,  7:  154, 11:   98,
+  15:     68, 13:    48,
+};
+const TEMPER = 0.5;
+
+const NUMBERS = Object.keys(PRO_ATTEMPTS).map(Number).sort((a, b) => a - b);
+
+/* Practice weights: the professional counts, square-rooted. Relative, not
+   percentages, exactly as the hand-written table they replaced. */
+const NUMBER_WEIGHTS = (() => {
+  const total = NUMBERS.reduce((a, n) => a + PRO_ATTEMPTS[n], 0);
+  const w = {};
+  for (const n of NUMBERS) w[n] = Math.pow(PRO_ATTEMPTS[n] / total, TEMPER);
+  return w;
+})();
+
+function weightsFor(dist) {
+  if (dist === "pro") return PRO_ATTEMPTS;
+  if (dist === "even") return null;
+  return NUMBER_WEIGHTS;
+}
+
+function drawNumber(dist) {
+  // Kept tolerant of the old boolean call (true meant "even").
+  const w = weightsFor(dist === true ? "even" : dist === false ? "practice" : dist);
+  if (!w) return NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+  const total = NUMBERS.reduce((a, n) => a + w[n], 0);
+  let r = Math.random() * total;
+  for (const n of NUMBERS) {
+    r -= w[n];
+    if (r <= 0) return n;
+  }
+  return 20;
+}
+
+/* The three targets of one round. Distinct, because a number drawn twice
+   turns the round back into throwing at the same bed -- the thing this drill
+   exists to avoid. With 20 numbers a redraw ends quickly even on the PRO
+   weights, but the loop is capped rather than trusted. */
+const SEQ_LEN = 3;
+
+function drawSequence(dist) {
+  const seq = [];
+  for (let guard = 0; seq.length < SEQ_LEN && guard < 200; guard++) {
+    const n = drawNumber(dist);
+    if (!seq.includes(n)) seq.push(n);
+  }
+  for (const n of NUMBERS) if (seq.length < SEQ_LEN && !seq.includes(n)) seq.push(n);
+  return seq;
+}
+
+const DIST_NOTE = {
+  practice: "Professional targeting, square-rooted so the numbers nobody practises still come up.",
+  pro: "Exactly what the top 16 aimed at over the 2019 season — 20 takes seven rounds in ten.",
+  even: "Every number equally likely.",
+};
+
+function paintDistribution(dist) {
+  const box = $("#mrand-distchart");
+  box.textContent = "";
+  const w = weightsFor(dist);
+  const val = n => (w ? w[n] : 1);
+  const max = Math.max(...NUMBERS.map(val));
+  const total = NUMBERS.reduce((a, n) => a + val(n), 0);
+  for (const n of NUMBERS) {
+    const v = val(n);
+    const d = el("div", "d" + (v / max > 0.3 ? " on" : ""));
+    const bar = el("i");
+    // The pro counts span three orders of magnitude; a linear bar would show
+    // 20 and nineteen slivers, so the chart is drawn on a square root too.
+    bar.style.height = (Math.sqrt(v / max) * 74) + "px";
+    bar.title = n + ": " + Math.round(v / total * 1000) / 10 + "%";
+    d.appendChild(bar);
+    d.appendChild(el("span", null, String(n)));
+    box.appendChild(d);
+  }
+  const note = $("#mrand-distnote");
+  if (note) note.textContent = DIST_NOTE[dist] || DIST_NOTE.practice;
+}
+
+const mrand = {
+  mode: "random20",
+  running: false,
+  started: 0,
+  roundCount: 20,
+  dist: "practice",
+  targets: [],
+  rounds: [],     // {targets: [a,b,c], points, hits: [bool,bool,bool]|null}
+
+  start() {
+    if (busy(this)) return;
+    this.roundCount = parseInt(getRandRounds(), 10);
+    this.dist       = getRandDist();
+    this.running    = true;
+    this.started    = Date.now() / 1000;
+    this.rounds     = [];
+    this.targets    = drawSequence(this.dist);
+    claimFeed(this);
+    show("#mrand-setup", false);
+    show("#mrand-done", false);
+    show("#mrand-live", true);
+    $("#mrand-sub").textContent = "one dart at each, in order — waiting for the board…";
+    this.render();
+  },
+
+  onVisit(v) {
+    if (!this.running) return;
+    this.record(v.points);
+  },
+
+  onPending() { this.render(); },
+  onPoll()    { this.render(); },
+
+  record(points) {
+    this.rounds.push({ targets: this.targets, points, hits: null });
+    $("#mrand-sub").textContent = points == null
+      ? "skipped — next sequence"
+      : this.targets.join(" · ") + " → " + points + " points. Which ones went in?";
+    if (this.rounds.length >= this.roundCount) { this.render(); this.finish(); return; }
+    this.targets = drawSequence(this.dist);
+    this.render();
+  },
+
+  /* Tag the round just thrown; the board has already moved us on.
+     Per dart rather than a count, because a count cannot say *which* of the
+     three you missed -- and that is the only thing the by-number table, the
+     whole point of tagging, can be built out of. */
+  tag(i) {
+    const r = this.rounds[this.rounds.length - 1];
+    if (!r || !(i >= 0) || i >= SEQ_LEN) return;
+    if (!r.hits) r.hits = [false, false, false];
+    r.hits[i] = !r.hits[i];
+    this.render();
+  },
+
+  /* A round where none of the three went in is still a tagged round: left
+     untagged it would quietly drop your worst rounds out of the hit rate. */
+  tagNone() {
+    const r = this.rounds[this.rounds.length - 1];
+    if (!r) return;
+    r.hits = [false, false, false];
+    this.render();
+  },
+
+  hitsIn(r) { return r.hits ? r.hits.filter(Boolean).length : null; },
+
+  stats() {
+    const scored = this.rounds.filter(r => r.points != null);
+    const tagged = this.rounds.filter(r => r.hits);
+    const pts    = scored.reduce((a, r) => a + r.points, 0);
+    const hits   = tagged.reduce((a, r) => a + this.hitsIn(r), 0);
+    return {
+      rounds: this.rounds.length,
+      points: pts,
+      avgPoints: scored.length ? round1(pts / scored.length) : 0,
+      tagged: tagged.length,
+      hits,
+      hitRate: tagged.length ? Math.round(hits / (tagged.length * SEQ_LEN) * 1000) / 10 : null,
+    };
+  },
+
+  render() {
+    const s = this.stats();
+    const n = this.rounds.length;
+    const last = this.rounds[n - 1];
+
+    $("#mrand-roundno").textContent = "Round " + Math.min(n + 1, this.roundCount) + " of " + this.roundCount;
+    $("#mrand-bar").style.width = (n / this.roundCount * 100) + "%";
+    $("#mrand-hitrate").innerHTML = s.hitRate == null ? "—" : s.hitRate + "<small>%</small>";
+    $("#mrand-avg").textContent  = n ? s.avgPoints : "—";
+    $("#mrand-last").textContent = last && last.points != null ? last.points : "—";
+    $("#mrand-time").textContent = fmtTime(Date.now() / 1000 - this.started);
+
+    // While a round is still to be thrown the sequence on show is that round,
+    // clean. Once the last round has landed there is nothing left to throw, so
+    // it stays on screen wearing its tags.
+    const done  = !this.running || n >= this.roundCount;
+    const shown = done && last ? last.targets : this.targets;
+    const marks = done && last ? last.hits : null;
+    repaint($("#mrand-target"), shown.join(",") + "|" + (marks ? marks.join("") : ""), box => {
+      shown.forEach((t, i) => {
+        if (i) box.appendChild(el("span", "arrow", "›"));
+        box.appendChild(el("span", "n" + (marks ? (marks[i] ? " hit" : " miss") : ""), String(t)));
+      });
+    });
+
+    $$("#mrand-tagger .tag-btn").forEach(b => {
+      b.disabled = !last;
+      if (b.dataset.none) {
+        b.classList.toggle("active", !!last && !!last.hits && this.hitsIn(last) === 0);
+        return;
+      }
+      const i = +b.dataset.i;
+      b.textContent = last ? String(last.targets[i]) : "—";
+      b.classList.toggle("active", !!last && !!last.hits && last.hits[i]);
+    });
+
+    const rows = $("#mrand-rows");
+    const sig = this.rounds.map(r => r.targets.join("-") + ":" + r.points + ":" +
+                                     (r.hits ? r.hits.join("") : "")).join(",") +
+                "|" + (feed.pending ? feed.pending.points : "");
+    repaint(rows, sig, box => {
+      this.rounds.slice().reverse().forEach((r, i) => {
+        const h = this.hitsIn(r);
+        const row = el("div", "row" + (h === 3 ? " max" : h === 2 ? " hot" : ""));
+        row.appendChild(el("span", "idx", "#" + (n - i)));
+        row.appendChild(el("span", "main", r.targets.join(" · ") + " → " + (r.points == null ? "–" : r.points)));
+        row.appendChild(el("span", "meta", r.hits == null ? "untagged"
+                          : (r.targets.filter((t, k) => r.hits[k]).join(" ") || "none in")));
+        box.appendChild(row);
+      });
+      if (feed.pending) {
+        const row = el("div", "row pending");
+        row.appendChild(el("span", "idx", "#" + (n + 1)));
+        row.appendChild(el("span", "main", this.targets.join(" · ") + " → " + feed.pending.points));
+        row.appendChild(el("span", "meta", "throwing…"));
+        box.insertBefore(row, box.firstChild);
+      }
+    });
+  },
+
+  async finish(abandoned) {
+    if (!this.running) return;
+    this.running = false;
+    releaseFeed();
+    show("#mrand-live", false);
+
+    const s = this.stats();
+    const dur = Date.now() / 1000 - this.started;
+    // Counted per dart, not per round: a round is three different numbers now,
+    // and its points cannot be split between them.
+    const perNumber = {};
+    for (const r of this.rounds) {
+      r.targets.forEach((t, i) => {
+        const p = perNumber[t] || (perNumber[t] = { darts: 0, tagged: 0, hits: 0 });
+        p.darts++;
+        if (r.hits) { p.tagged++; if (r.hits[i]) p.hits++; }
+      });
+    }
+    const stats = Object.assign({}, s, {
+      distribution: this.dist,
+      sequence: SEQ_LEN,
+      roundsPlanned: this.roundCount,
+      duration_s: Math.round(dur),
+      perNumber,
+      complete: !abandoned && this.rounds.length >= this.roundCount,
+    });
+
+    const box = $("#mrand-done");
+    box.hidden = false;
+    box.textContent = "";
+    box.appendChild(el("div", "card-label", abandoned ? "Abandoned" : "Done — " + this.rounds.length + " rounds"));
+    box.appendChild(summaryGrid([
+      ["Hit rate", s.hitRate == null ? "—" : s.hitRate + "%", true],
+      ["Avg pts", s.avgPoints],
+      ["Points", s.points],
+      ["Tagged", s.tagged + "/" + s.rounds],
+      ["Time", fmtTime(dur)],
+    ]));
+    box.appendChild(numberTable(perNumber));
+    if (!abandoned && this.rounds.length) {
+      const saved = await saveSession("random20", this.started, stats,
+        this.rounds.map(r => [r.targets, r.points, r.hits]));
+      if (saved) box.appendChild(pbNote("random20", saved));
+    }
+    const again = el("button", "btn primary wide", "Go again");
+    again.style.marginTop = "14px";
+    again.onclick = () => { show("#mrand-done", false); show("#mrand-setup", true); };
+    box.appendChild(again);
+    show("#mrand-setup", false);
+  },
+};
+
+const getRandRounds = segment("#mrand-rounds");
+const getRandDist   = segment("#mrand-dist", paintDistribution);
+paintDistribution("practice");
+$("#mrand-start").onclick = () => mrand.start();
+$("#mrand-abort").onclick = () => mrand.finish(true);
+$("#mrand-zero").onclick  = () => { if (mrand.running) mrand.record(0); };
+$("#mrand-skip").onclick  = () => { if (mrand.running) mrand.record(null); };
+$("#mrand-tagger").addEventListener("click", e => {
+  const b = e.target.closest(".tag-btn");
+  if (!b || b.disabled) return;
+  if (b.dataset.none) mrand.tagNone(); else mrand.tag(+b.dataset.i);
+});
+
+/* Keys 1-3 flip the dart in that position, 0 says none of them went in, so
+   you never have to look down. */
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea")) return;
+  if (active === mrand && /^[0-3]$/.test(e.key)) {
+    if (e.key === "0") mrand.tagNone(); else mrand.tag(+e.key - 1);
+    e.preventDefault();
+  }
+  if (active === mlegs && /^[1-3]$/.test(e.key)) { mlegs.tag(+e.key); e.preventDefault(); }
+});
+
+/* =========================================================================
+   Shared result rendering
+   ========================================================================= */
+function summaryGrid(pairs) {
+  const box = el("div", "stats");
+  for (const [k, v, hero] of pairs) {
+    const s = el("div", "stat" + (hero ? " hero" : ""));
+    s.appendChild(el("div", "k", k));
+    s.appendChild(el("div", "v", String(v)));
+    box.appendChild(s);
+  }
+  return box;
+}
+
+function numberTable(perNumber) {
+  const wrap = el("div");
+  wrap.appendChild(el("div", "card-label", "By number"));
+  const t = el("table", "grid");
+  t.innerHTML = "<tr><th>No.</th><th>Darts</th><th>In bed</th><th>Hit rate</th></tr>";
+  Object.keys(perNumber).map(Number).sort((a, b) => b - a).forEach(n => {
+    const p = perNumber[n];
+    const rate = p.tagged ? Math.round(p.hits / p.tagged * 1000) / 10 : null;
+    const tr = el("tr");
+    tr.innerHTML = "<td class='n'>" + n + "</td><td>" + p.darts + "</td><td>" +
+                   (p.tagged ? p.hits + "/" + p.tagged : "–") + "</td><td>" +
+                   (rate == null ? "–" : rate + "%") + "</td>";
+    t.appendChild(tr);
+  });
+  wrap.appendChild(t);
+  return wrap;
+}
+
+/* Metric definitions, one per mode: what the progress view charts. */
+const METRICS = {
+  "301": {
+    label: "3-dart average",
+    unit: "",
+    lowerIsBetter: false,
+    value: s => s.stats.avg3 || null,
+    line: s => s.stats.avg3 + " avg",
+    extra: s => (s.stats.darts || 0) + " darts · " + s.stats.scored + " scored · best " +
+                s.stats.best + " · " + s.stats.tons + "×100+",
+  },
+  "legs101": {
+    label: "Darts per leg",
+    unit: "",
+    lowerIsBetter: true,
+    value: s => s.stats.dartsAvg || null,
+    line: s => s.stats.dartsAvg + " d/leg",
+    extra: s => s.stats.legs + " legs · best " + s.stats.best + " · " + s.stats.busts + " bust",
+  },
+  "random20": {
+    label: "Hit rate",
+    unit: "%",
+    lowerIsBetter: false,
+    value: s => (s.stats.hitRate == null ? null : s.stats.hitRate),
+    line: s => (s.stats.hitRate == null ? s.stats.avgPoints + " avg" : s.stats.hitRate + "%"),
+    extra: s => s.stats.rounds + " rounds · " + s.stats.avgPoints + " avg pts · " + s.stats.distribution,
+  },
+};
+
+/* Is this session the best one so far for its mode? */
+function isPB(mode, session, all) {
+  const m = METRICS[mode];
+  const v = m.value(session);
+  if (v == null) return false;
+  const others = all.filter(s => s.mode === mode && s.id !== session.id)
+                    .map(m.value).filter(x => x != null);
+  if (!others.length) return true;
+  return m.lowerIsBetter ? v < Math.min(...others) : v > Math.max(...others);
+}
+
+function pbNote(mode, saved) {
+  const m = METRICS[mode];
+  const v = m.value(saved);
+  const n = el("div", "hint");
+  if (v != null && isPB(mode, saved, sessions)) {
+    n.innerHTML = "<b>New personal best.</b> " + m.label + ": " + v + m.unit + ".";
+  } else {
+    const prev = sessions.filter(s => s.mode === mode && s.id !== saved.id).map(m.value).filter(x => x != null);
+    const best = prev.length ? (m.lowerIsBetter ? Math.min(...prev) : Math.max(...prev)) : null;
+    n.innerHTML = "Saved. Your best " + m.label.toLowerCase() + " is " +
+                  (best == null ? "—" : "<b>" + best + m.unit + "</b>") + ".";
+  }
+  n.style.marginBottom = "0";
+  return n;
+}
+
+/* =========================================================================
+   Progress view
+   ========================================================================= */
+let progMode = "301";
+
+function lineChart(values, lowerIsBetter) {
+  const W = 600, H = 190, PAD_L = 34, PAD_R = 8, PAD_T = 12, PAD_B = 22;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("class", "chart");
+  const ns = "http://www.w3.org/2000/svg";
+  const mk = (tag, attrs) => {
+    const n = document.createElementNS(ns, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  };
+
+  let lo = Math.min(...values), hi = Math.max(...values);
+  if (hi === lo) { hi = lo + 1; lo = Math.max(0, lo - 1); }
+  const pad = (hi - lo) * 0.15;
+  lo -= pad; hi += pad;
+
+  const x = i => PAD_L + (values.length === 1 ? (W - PAD_L - PAD_R) / 2
+                        : i / (values.length - 1) * (W - PAD_L - PAD_R));
+  const y = v => PAD_T + (1 - (v - lo) / (hi - lo)) * (H - PAD_T - PAD_B);
+
+  // Gridlines and axis labels.
+  for (let g = 0; g <= 3; g++) {
+    const v = lo + (hi - lo) * g / 3;
+    svg.appendChild(mk("line", { x1: PAD_L, x2: W - PAD_R, y1: y(v), y2: y(v), stroke: "#222", "stroke-width": 1 }));
+    const t = mk("text", { x: PAD_L - 6, y: y(v) + 4, fill: "#5a5a5a", "font-size": 10, "text-anchor": "end" });
+    t.textContent = Math.round(v * 10) / 10;
+    svg.appendChild(t);
+  }
+
+  const pts = values.map((v, i) => x(i) + "," + y(v)).join(" ");
+  svg.appendChild(mk("polyline", { points: pts, fill: "none", stroke: "#3dbfa3", "stroke-width": 2,
+                                   "stroke-linejoin": "round", "stroke-linecap": "round" }));
+
+  const bestVal = lowerIsBetter ? Math.min(...values) : Math.max(...values);
+  values.forEach((v, i) => {
+    const isBest = v === bestVal;
+    const c = mk("circle", { cx: x(i), cy: y(v), r: isBest ? 4.5 : 2.8,
+                             fill: isBest ? "#3dbfa3" : "#111", stroke: "#3dbfa3", "stroke-width": 2 });
+    const title = mk("title");
+    title.textContent = "#" + (i + 1) + ": " + v;
+    c.appendChild(title);
+    svg.appendChild(c);
+  });
+
+  return svg;
+}
+
+function renderProgress() {
+  const body = $("#prog-body");
+  body.textContent = "";
+  const m = METRICS[progMode];
+  const mine = sessions.filter(s => s.mode === progMode)
+                       .sort((a, b) => a.started_ts - b.started_ts);
+
+  if (!mine.length) {
+    const c = el("div", "card");
+    c.appendChild(el("div", "empty",
+      "Nothing here yet.<br>Throw a session and it shows up automatically — the history is kept in <b>training_stats.json</b> next to the app, not in this browser."));
+    body.appendChild(c);
+    return;
+  }
+
+  const values = mine.map(m.value).filter(v => v != null);
+  const best = values.length ? (m.lowerIsBetter ? Math.min(...values) : Math.max(...values)) : null;
+  const last5 = values.slice(-5);
+  const last5avg = last5.length ? round1(last5.reduce((a, b) => a + b, 0) / last5.length) : null;
+  const totalTime = mine.reduce((a, s) => a + (s.stats.duration_s || 0), 0);
+
+  const head = el("div", "card");
+  head.appendChild(el("div", "card-label", m.label + " over time"));
+  head.appendChild(summaryGrid([
+    ["Best", best == null ? "—" : best + m.unit, true],
+    ["Last 5", last5avg == null ? "—" : last5avg + m.unit],
+    ["Sessions", mine.length],
+    ["Time thrown", fmtTime(totalTime)],
+  ]));
+  if (values.length) {
+    const chartBox = el("div");
+    chartBox.style.marginTop = "14px";
+    chartBox.appendChild(lineChart(values, m.lowerIsBetter));
+    head.appendChild(chartBox);
+  }
+  body.appendChild(head);
+
+  // Random 20 earns an extra view: which numbers you are actually missing.
+  if (progMode === "random20") {
+    const agg = {};
+    for (const s of mine) {
+      const per = s.stats.perNumber || {};
+      for (const n in per) {
+        const a = agg[n] || (agg[n] = { darts: 0, tagged: 0, hits: 0 });
+        a.darts  += per[n].darts  || 0;
+        a.tagged += per[n].tagged || 0;
+        a.hits   += per[n].hits   || 0;
+      }
+    }
+    const keys = Object.keys(agg).filter(n => agg[n].tagged > 0);
+    if (keys.length) {
+      const c = el("div", "card");
+      c.appendChild(el("div", "card-label", "Weakest numbers — all sessions"));
+      const t = el("table", "grid");
+      t.innerHTML = "<tr><th>No.</th><th>Darts</th><th>In bed</th><th>Hit rate</th></tr>";
+      keys.map(Number)
+          .sort((a, b) => (agg[a].hits / agg[a].tagged) - (agg[b].hits / agg[b].tagged))
+          .forEach(n => {
+            const a = agg[n];
+            const rate = Math.round(a.hits / a.tagged * 1000) / 10;
+            const tr = el("tr");
+            tr.innerHTML = "<td class='n'>" + n + "</td><td>" + a.darts + "</td><td>" +
+                           a.hits + "/" + a.tagged + "</td>" +
+                           "<td style='color:" + (rate >= 50 ? "#22c55e" : rate >= 30 ? "#f59e0b" : "#ef4444") +
+                           ";font-weight:700'>" + rate + "%</td>";
+            t.appendChild(tr);
+          });
+      c.appendChild(t);
+      body.appendChild(c);
+    }
+  }
+
+  const list = el("div", "card");
+  list.appendChild(el("div", "card-label", "Sessions"));
+  mine.slice().reverse().forEach(s => {
+    const row = el("div", "sess");
+    row.appendChild(el("span", "when", fmtDate(s.started_ts)));
+    const head2 = el("div", "head");
+    head2.innerHTML = "<b>" + m.line(s) + "</b><span>" + m.extra(s) + "</span>";
+    row.appendChild(head2);
+    if (isPB(progMode, s, sessions)) row.appendChild(el("span", "pb", "PB"));
+    const del = el("button", "del", "&times;");
+    del.title = "Delete this session";
+    del.onclick = async () => { await deleteSession(s.id); renderProgress(); };
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+  body.appendChild(list);
+}
+
+$$("[data-prog]").forEach(b => {
+  b.onclick = () => {
+    $$("[data-prog]").forEach(x => x.classList.toggle("active", x === b));
+    progMode = b.dataset.prog;
+    renderProgress();
+  };
+});
+
+/* =========================================================================
+   Tabs
+   ========================================================================= */
+$$("[data-tab]").forEach(b => {
+  b.onclick = () => {
+    $$("[data-tab]").forEach(x => x.classList.toggle("active", x === b));
+    ["m301", "mlegs", "mrand", "prog"].forEach(t => { $("#tab-" + t).hidden = t !== b.dataset.tab; });
+    if (b.dataset.tab === "prog") renderProgress();
+  };
+});
+
+loadSessions();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#111111"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+  <title>{% if initial %}{{ initial.score }} | {% endif %}Finish IT Live</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #111;
+      --card:    #1a1a1a;
+      --card-2:  #202020;
+      --line:    #252525;
+      --line-2:  #303030;
+      --text:    #fff;
+      --muted:   #6b6b6b;
+      --muted-2: #999;
+      --accent:  #3dbfa3;
+      --accent-ink: #06231d;
+      --accent-dim: #162e27;
+      --warn:    #f59e0b;
+      --bad:     #ef4444;
+      --good:    #22c55e;
+      --blue:    #60a5fa;
+    }
+
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .num { font-family: 'Oswald', 'Poppins', sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+    button { font-family: inherit; }
+
+    /* ── Header ── */
+    .top {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px 12px;
+      padding-top: calc(14px + env(safe-area-inset-top));
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .brand small { color: var(--muted); font-weight: 700; }
+    .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .top nav { display: flex; gap: 16px; }
+    .top nav a {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none;
+    }
+    .top nav a:hover { color: var(--accent); }
+
+    /* ── Layout ── */
+    .content {
+      max-width: 560px; margin: 0 auto;
+      padding: 12px 14px calc(28px + env(safe-area-inset-bottom));
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 18px; padding: 14px 14px 16px; margin-bottom: 10px;
+    }
+    .card-label {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 0.62rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .card-label .count { font-size: 0.8rem; color: var(--muted-2); letter-spacing: 0; }
+    .badge {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-dim); border: 1px solid #2a3d35;
+      border-radius: 6px; padding: 2px 7px;
+    }
+
+    /* ── Segmented controls & pills ── */
+    .seg { display: inline-flex; background: #141414; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+    .seg button {
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--muted-2); background: none; border: none; padding: 8px 13px; cursor: pointer;
+      min-width: 52px;
+    }
+    .seg button.active { background: var(--accent); color: var(--accent-ink); }
+    .seg button:disabled { opacity: 0.5; cursor: default; }
+    .pill {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap;
+    }
+    .pill.push { color: var(--good); }
+    .pill.ocr  { color: var(--warn); }
+    .pill.none { color: var(--muted); }
+    .pill.type { color: var(--muted-2); }
+    .pill.dead { color: var(--bad); }
+
+    /* ── Hero: the score ── */
+    .hero { padding-top: 12px; }
+    .hero-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .hero-bar .spacer { flex: 1; }
+    .rest-label {
+      text-align: center; margin-top: 16px;
+      font-size: 0.62rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .score {
+      text-align: center; line-height: 1; margin: 2px 0 6px;
+      font-size: clamp(4.6rem, 27vw, 7.2rem); letter-spacing: -0.03em;
+      transition: color .15s;
+    }
+    .score.empty { color: #2c2c2c; }
+    .score.nofinish { color: var(--blue); }
+    .hero-msg { text-align: center; min-height: 1.2em; font-size: 0.8rem; font-weight: 600; color: var(--muted-2); }
+    .hero-msg.warn { color: var(--warn); }
+
+    .type-form { display: flex; gap: 8px; margin-top: 14px; }
+    .type-form input {
+      flex: 1; min-width: 0;
+      font-family: 'Oswald', 'Poppins', sans-serif; font-weight: 700;
+      font-size: 1.6rem; text-align: center; letter-spacing: 0.02em;
+      padding: 10px 14px; border-radius: 12px;
+      border: 1.5px solid var(--line-2); background: #141414; color: #fff; outline: none;
+      -moz-appearance: textfield;
+    }
+    .type-form input::-webkit-outer-spin-button, .type-form input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .type-form input:focus { border-color: var(--accent); }
+    .type-form input::placeholder { color: #3a3a3a; font-size: 1.1rem; letter-spacing: 0.1em; }
+    .btn {
+      font-size: 0.85rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      border-radius: 12px; padding: 12px 22px; cursor: pointer;
+      background: var(--card-2); border: 1px solid var(--line-2); color: #fff;
+    }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn.primary:active { background: #46d6b7; }
+    body.live .type-form { display: none; }
+    body:not(.live) #fieldSeg { display: none; }
+
+    /* ── Best finish: three big tiles ── */
+    .tiles { display: flex; justify-content: center; gap: 8px; }
+    .tiles:empty { display: none; }
+    .tile {
+      flex: 1 1 0; max-width: 150px; min-height: 84px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 14px; background: #202020; border: 1px solid var(--line-2);
+      font-size: clamp(2rem, 10.5vw, 2.9rem); line-height: 1; padding: 14px 4px;
+    }
+    .tile.double { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .nofinish-box {
+      text-align: center; padding: 16px 8px 8px;
+      font-size: 1.05rem; font-weight: 700; color: var(--blue);
+    }
+    .nofinish-box small { display: block; margin-top: 4px; font-size: 0.74rem; font-weight: 600; color: var(--muted-2); }
+    .waiting {
+      text-align: center; padding: 10px 8px 4px;
+      font-size: 0.8rem; font-weight: 600; color: var(--muted-2); line-height: 1.5;
+    }
+
+    /* ── Way rows ── */
+    .rows { display: flex; flex-direction: column; gap: 6px; }
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px;
+      background: #1e1e1e; border: 1px solid #2a2a2a;
+    }
+    .row.suggested { background: #1a2820; border-color: #2a3d35; }
+    .row .idx { font-size: 0.66rem; font-weight: 800; color: #444; min-width: 16px; text-align: center; }
+    .row .darts { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .row .dart { font-size: 1.55rem; line-height: 1; }
+    .row .dart.double { color: var(--accent); }
+    .row .sep { color: #3a3a3a; font-size: 0.85rem; }
+
+    /* ── Folds ── */
+    details.card { padding: 0; }
+    details.card summary {
+      list-style: none; cursor: pointer; user-select: none;
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 14px;
+      font-size: 0.62rem; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    details.card summary::-webkit-details-marker { display: none; }
+    details.card summary .count {
+      font-family: 'Oswald', sans-serif; font-size: 0.8rem; color: var(--muted-2);
+      letter-spacing: 0; margin-left: auto;
+    }
+    details.card summary::after {
+      content: ""; width: 7px; height: 7px; flex-shrink: 0;
+      border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg); transition: transform .15s; margin-bottom: 3px;
+    }
+    details.card summary:has(.count:empty)::after { margin-left: auto; }
+    details[open].card summary::after { transform: rotate(-135deg); margin-bottom: -3px; }
+    details.card .fold-body { padding: 0 14px 14px; }
+    details.card.hidden { display: none; }
+
+    /* ── Reader diagnostics ── */
+    .diag-grid {
+      display: grid; grid-template-columns: auto 1fr; gap: 6px 14px;
+      font-size: 0.74rem; margin-bottom: 12px;
+    }
+    .diag-grid dt { color: var(--muted); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.6rem; align-self: center; }
+    .diag-grid dd { font-family: 'Oswald', sans-serif; font-size: 0.9rem; color: var(--muted-2); word-break: break-all; }
+    .region-frame { border: 2px solid var(--accent); border-radius: 8px; overflow: hidden; background: #000; line-height: 0; }
+    .region-frame img { display: block; width: 100%; height: auto; min-height: 24px; }
+
+    @media (min-width: 560px) {
+      .content { padding-top: 18px; }
+      .card { padding: 16px 18px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+{# ── Server-side rendering of a POSTed score, so the page is complete before JS runs (and without it). ── #}
+{% macro tiles(darts) -%}
+  {% set ds = darts|reject('equalto', 'NA')|list %}
+  {% for d in ds %}<div class="tile num {% if loop.last %}double{% endif %}">{{ d }}</div>{% endfor %}
+{%- endmacro %}
+{% macro rows(list, cls='', start=1) -%}
+  {% for item in list %}
+  <div class="row {{ cls }}">
+    <span class="idx">{{ loop.index0 + start }}</span>
+    <div class="darts">
+      {% set ds = item|reject('equalto', 'NA')|list %}
+      {% for d in ds %}{% if not loop.first %}<span class="sep">›</span>{% endif %}<span class="dart num {% if loop.last %}double{% endif %}">{{ d }}</span>{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+{%- endmacro %}
+
+<header class="top">
+  <div class="brand"><span class="dot"></span>Finish IT <small>Live</small></div>
+  <nav><a href="/">Calculator</a><a href="/finishes">Finishes</a><a href="/training">Training</a></nav>
+</header>
+
+<main class="content">
+
+  <!-- Score -->
+  <section class="card hero">
+    <div class="hero-bar">
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="live">Live</button>
+        <button type="button" data-mode="type">Type</button>
+      </div>
+      <span class="pill none" id="srcPill">—</span>
+      <span class="spacer"></span>
+      <div class="seg" id="fieldSeg">
+        <button type="button" data-field="1">P1</button>
+        <button type="button" data-field="2">P2</button>
+      </div>
+    </div>
+
+    <div class="rest-label">Rest</div>
+    <div class="score num {% if not initial %}empty{% elif not initial.possible %}nofinish{% endif %}" id="score">{{ initial.score if initial else '—' }}</div>
+    <div class="hero-msg {% if initial and not initial.possible %}warn{% endif %}" id="heroMsg">{% if initial and not initial.possible %}{{ initial.message }}{% endif %}</div>
+
+    <form id="typeForm" method="POST" class="type-form" autocomplete="off">
+      <input type="number" inputmode="numeric" pattern="[0-9]*" name="input_value" id="input_value"
+             min="0" max="9999" placeholder="SCORE" value="{{ initial.score if initial else '' }}">
+      <button type="submit" class="btn primary">Go</button>
+    </form>
+  </section>
+
+  <!-- Best finish -->
+  <section class="card" id="bestCard">
+    <div class="card-label"><span id="bestLabel">Best finish</span><span class="badge" id="bestBadge">Best</span></div>
+    <div class="tiles" id="bestTiles">
+      {%- if initial %}
+        {%- set best = initial.suggested[0] if initial.suggested else (initial.alternatives[0] if initial.alternatives else none) %}
+        {%- if best and initial.possible %}{{ tiles(best) }}{% endif %}
+      {%- endif -%}
+    </div>
+    <div id="bestNote"></div>
+  </section>
+
+  <!-- More ways -->
+  <section class="card" id="moreCard">
+    <div class="card-label"><span>More ways</span><span class="count num" id="moreCount"></span></div>
+    <div class="rows" id="moreRows">
+      {%- if initial %}{{ rows(initial.suggested[1:], 'suggested') }}{{ rows(initial.alternatives, '', initial.suggested[1:]|length + 1) }}{% endif -%}
+    </div>
+  </section>
+
+  <!-- Folds -->
+  <details class="card" id="foldAll">
+    <summary>All ways <span class="count" id="countAll"></span></summary>
+    <div class="fold-body rows" id="rowsAll">{% if initial %}{{ rows(initial.all_ways) }}{% endif %}</div>
+  </details>
+  <details class="card" id="foldNaDd">
+    <summary>Double · Double <span class="count" id="countNaDd"></span></summary>
+    <div class="fold-body rows" id="rowsNaDd">{% if initial %}{{ rows(initial.na_dd) }}{% endif %}</div>
+  </details>
+  <details class="card" id="foldSdd">
+    <summary>Single · Double · Double <span class="count" id="countSdd"></span></summary>
+    <div class="fold-body rows" id="rowsSdd">{% if initial %}{{ rows(initial.sdd) }}{% endif %}</div>
+  </details>
+
+  <details class="card" id="foldDiag">
+    <summary>Reader</summary>
+    <div class="fold-body">
+      <dl class="diag-grid">
+        <dt>Source</dt><dd id="dSource">—</dd>
+        <dt>Field</dt><dd id="dField">—</dd>
+        <dt>Raw</dt><dd id="dRaw">—</dd>
+        <dt>Updated</dt><dd id="dAge">—</dd>
+        <dt>Region</dt><dd id="dRegion">—</dd>
+      </dl>
+      <div class="region-frame"><img id="regionImg" alt="OCR capture region" /></div>
+    </div>
+  </details>
+
+</main>
+
+<script>
+(() => {
+  const INITIAL = {{ initial|tojson if initial else 'null' }};
+  const POLL_MS = 700;
+
+  const $ = id => document.getElementById(id);
+  const els = {
+    score: $('score'), msg: $('heroMsg'), srcPill: $('srcPill'),
+    modeSeg: $('modeSeg'), fieldSeg: $('fieldSeg'),
+    form: $('typeForm'), input: $('input_value'),
+    bestCard: $('bestCard'), bestTiles: $('bestTiles'), bestBadge: $('bestBadge'), bestLabel: $('bestLabel'), bestNote: $('bestNote'),
+    moreCard: $('moreCard'), moreRows: $('moreRows'), moreCount: $('moreCount'),
+    folds: {
+      all:  { d: $('foldAll'),  rows: $('rowsAll'),  count: $('countAll')  },
+      nadd: { d: $('foldNaDd'), rows: $('rowsNaDd'), count: $('countNaDd') },
+      sdd:  { d: $('foldSdd'),  rows: $('rowsSdd'),  count: $('countSdd')  },
+    },
+    diag: $('foldDiag'), dSource: $('dSource'), dField: $('dField'), dRaw: $('dRaw'), dAge: $('dAge'), dRegion: $('dRegion'), regionImg: $('regionImg'),
+  };
+
+  const state = { live: false, shownScore: null, field: null, timer: null };
+
+  /* ── Rendering ── */
+  const clean = row => (Array.isArray(row) ? row : [row]).filter(t => t !== 'NA');
+  const isNil = v => v === null || v === undefined;
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function renderRow(darts, i, cls) {
+    const row = el('div', 'row' + (cls ? ' ' + cls : ''));
+    row.appendChild(el('span', 'idx', String(i)));
+    const wrap = el('div', 'darts');
+    darts.forEach((d, k) => {
+      if (k > 0) wrap.appendChild(el('span', 'sep', '›'));
+      wrap.appendChild(el('span', 'dart num' + (k === darts.length - 1 ? ' double' : ''), d));
+    });
+    row.appendChild(wrap);
+    return row;
+  }
+
+  // lists: [[rows, cssClass], ...] rendered in order with one running index.
+  function fillRows(container, lists) {
+    container.innerHTML = '';
+    let i = 0;
+    lists.forEach(([list, cls]) => (list || []).forEach(r => container.appendChild(renderRow(clean(r), ++i, cls))));
+    return i;
+  }
+
+  function setScore(score, possible) {
+    els.score.textContent = isNil(score) ? '—' : score;
+    els.score.classList.toggle('empty', isNil(score));
+    els.score.classList.toggle('nofinish', !isNil(score) && possible === false);
+    document.title = (isNil(score) ? '' : score + ' | ') + 'Finish IT Live';
+  }
+
+  function setMessage(text, warn) {
+    els.msg.textContent = text || '';
+    els.msg.classList.toggle('warn', !!warn);
+  }
+
+  function renderWays(d) {
+    const suggested = d.suggested || [], alternatives = d.alternatives || [];
+    // Best finish: the first suggested row, else the first alternative (170 has no "suggested" row).
+    const bestFromAlt = !suggested.length && alternatives.length > 0;
+    const best = suggested[0] || alternatives[0] || null;
+
+    els.bestTiles.innerHTML = '';
+    els.bestNote.innerHTML = '';
+    els.bestCard.style.display = '';
+    if (!d.possible) {
+      els.bestBadge.style.display = 'none';
+      els.bestLabel.textContent = 'No finish';
+      const box = el('div', 'nofinish-box', d.score > 170 ? 'Not in three darts' : 'Set up a finish');
+      box.appendChild(el('small', '', d.score > 170 ? 'Nothing finishes from above 170. Score, then look again.' : 'This score has no three-dart checkout. Leave a double.'));
+      els.bestNote.appendChild(box);
+    } else if (best) {
+      els.bestBadge.style.display = '';
+      els.bestLabel.textContent = 'Best finish';
+      const darts = clean(best);
+      darts.forEach((t, k) => els.bestTiles.appendChild(el('div', 'tile num' + (k === darts.length - 1 ? ' double' : ''), t)));
+    } else {
+      els.bestCard.style.display = 'none';
+    }
+
+    const n = fillRows(els.moreRows, [[suggested.slice(1), 'suggested'], [alternatives.slice(bestFromAlt ? 1 : 0), '']]);
+    els.moreCount.textContent = n || '';
+    els.moreCard.style.display = n ? '' : 'none';
+
+    const fold = (f, list) => {
+      const cnt = fillRows(f.rows, [[list, '']]);
+      f.count.textContent = cnt || '';
+      f.d.classList.toggle('hidden', cnt === 0);
+    };
+    fold(els.folds.all,  d.all_ways);
+    fold(els.folds.nadd, d.na_dd);
+    fold(els.folds.sdd,  d.sdd);
+  }
+
+  function clearWays(note) {
+    els.bestCard.style.display = '';
+    els.bestBadge.style.display = 'none';
+    els.bestLabel.textContent = 'Best finish';
+    els.bestTiles.innerHTML = '';
+    els.bestNote.innerHTML = '';
+    if (note) els.bestNote.appendChild(el('div', 'waiting', note));
+    els.moreCard.style.display = 'none';
+    Object.values(els.folds).forEach(f => { f.rows.innerHTML = ''; f.count.textContent = ''; f.d.classList.add('hidden'); });
+  }
+
+  /* ── Data ── */
+  let waysReq = 0;
+  async function showScore(score) {
+    if (isNil(score)) {
+      state.shownScore = null;
+      setScore(null);
+      setMessage('');
+      clearWays(state.live ? 'Waiting for a score from the board…' : 'Type a score and press Go.');
+      return;
+    }
+    if (score === state.shownScore) return;
+    state.shownScore = score;
+    setScore(score, true);
+    const req = ++waysReq;
+    try {
+      const r = await fetch('/api/ways/' + score);
+      const d = await r.json();
+      if (req !== waysReq || !d.ok) return;      // a newer score arrived meanwhile
+      setScore(d.score, d.possible);
+      setMessage(d.possible ? '' : d.message, !d.possible);
+      renderWays(d);
+    } catch (e) { console.log('ways error', e); }
+  }
+
+  const PILL_TEXT = { push: 'Extension', ocr: 'Screen OCR', type: 'Manual', dead: 'Offline', none: 'No signal' };
+  function setSourcePill(src) {
+    const s = PILL_TEXT[src] ? src : 'none';
+    els.srcPill.className = 'pill ' + s;
+    els.srcPill.textContent = PILL_TEXT[s];
+  }
+
+  function setField(field) {
+    state.field = field;
+    els.fieldSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', Number(b.dataset.field) === field));
+    els.dField.textContent = field ? 'P' + field : '—';
+  }
+
+  function setRegion(region) {
+    if (region) els.dRegion.textContent = `${region.width}×${region.height} @ ${region.left},${region.top}`;
+  }
+
+  function refreshPreview() {
+    if (els.diag.open) els.regionImg.src = '/api/region_preview?t=' + Date.now();
+  }
+
+  function refreshDiag(data) {
+    els.dSource.textContent = data.source || '—';
+    els.dRaw.textContent = data.raw ? String(data.raw) : '—';
+    if (data.updated_ts) {
+      const age = Math.max(0, Date.now() / 1000 - data.updated_ts);
+      els.dAge.textContent = age < 60 ? age.toFixed(1) + ' s ago' : Math.round(age / 60) + ' min ago';
+    } else {
+      els.dAge.textContent = '—';
+    }
+    refreshPreview();
+  }
+
+  async function poll() {
+    if (!state.live) return;
+    try {
+      const r = await fetch('/api/outshot');
+      const data = await r.json();
+      if (typeof data.field === 'number') setField(data.field);
+      setSourcePill(data.source);
+      refreshDiag(data);
+      showScore(data.ok ? data.score : null);
+    } catch (e) {
+      setSourcePill('dead');
+      showScore(null);
+      els.bestNote.innerHTML = '';
+      els.bestNote.appendChild(el('div', 'waiting', 'Cannot reach the app. Is app.py running?'));
+    }
+  }
+
+  /* ── Modes ── */
+  function setLive(on) {
+    state.live = on;
+    try { localStorage.setItem('ocrEnabled', on ? '1' : '0'); } catch (e) {}
+    document.body.classList.toggle('live', on);
+    els.modeSeg.querySelectorAll('button').forEach(b => b.classList.toggle('active', (b.dataset.mode === 'live') === on));
+    if (on) {
+      if (state.timer === null) { poll(); state.timer = setInterval(poll, POLL_MS); }
+    } else {
+      if (state.timer !== null) { clearInterval(state.timer); state.timer = null; }
+      setSourcePill('type');
+      const v = els.input.value.trim();
+      showScore(v === '' ? null : Number(v));
+    }
+  }
+
+  els.modeSeg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    setLive(b.dataset.mode === 'live');
+    if (!state.live) els.input.focus();
+  });
+
+  els.fieldSeg.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const field = Number(b.dataset.field);
+    const buttons = els.fieldSeg.querySelectorAll('button');
+    buttons.forEach(x => x.disabled = true);
+    try {
+      const r = await fetch('/api/set_field', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ field }) });
+      const d = await r.json();
+      if (d.ok) { setField(d.field); setRegion(d.region); refreshPreview(); }
+    } catch (err) { console.log('setField error', err); }
+    finally { buttons.forEach(x => x.disabled = false); }
+  });
+
+  els.form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = els.input.value.trim();
+    if (v === '' || !isFinite(Number(v))) return;
+    const n = Math.max(0, Math.min(9999, Math.floor(Number(v))));
+    els.input.value = n;
+    els.input.blur();
+    showScore(n);
+  });
+
+  els.diag.addEventListener('toggle', refreshPreview);
+
+  /* ── Boot ── */
+  fetch('/api/current_field').then(r => r.json()).then(d => { setField(d.field); setRegion(d.region); }).catch(() => {});
+
+  if (INITIAL) {
+    state.shownScore = INITIAL.score;
+    setScore(INITIAL.score, INITIAL.possible);
+    setMessage(INITIAL.possible ? '' : INITIAL.message, !INITIAL.possible);
+    renderWays(INITIAL);
+  }
+
+  let stored = null;
+  try { stored = localStorage.getItem('ocrEnabled'); } catch (e) {}
+  // A POSTed score means the user was typing; with nothing remembered, follow the board.
+  setLive(INITIAL ? false : stored === null ? true : stored === '1');
+})();
+</script>
+</body>
+</html>

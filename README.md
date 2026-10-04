@@ -13,6 +13,7 @@ A real-time dart outshot calculator with screen OCR, template matching, and a cl
 - **Field switcher** — supports two OCR capture regions (Field 1 / Field 2)
 - **Debounced score detection** — requires 2 consecutive matching reads before updating, reducing false positives
 - **Template matching engine** — fast matrix-based image fingerprinting (falls back to Tesseract if templates are missing)
+- **Training modes** — three drills at `/training`, scored straight off the board through the extension, with the history kept so you can see progress
 
 ---
 
@@ -24,10 +25,13 @@ A real-time dart outshot calculator with screen OCR, template matching, and a cl
 ├── auto_capture.py         # Automated template capture (0–501) via pyautogui
 ├── train.py                # CNN trainer for score classification (PyTorch)
 ├── test_ocr.py             # CLI tool to test OCR on a saved image file
+├── test_training.js        # Runs the training-drill logic under node (no browser)
 ├── show_region.py          # Debug tool — screenshots the current OCR region
 ├── templates/
-│   ├── index.html          # Main calculator UI
-│   └── finishes.html       # All finishes table (2–170)
+│   ├── index.html          # The calculator (phone-frame design)
+│   ├── live.html           # Board follower: live score + reader diagnostics
+│   ├── finishes.html       # All finishes table (2–170)
+│   └── training.html       # The three training drills + progress history
 └── templates_capture/
     └── field2/             # Captured template images (one PNG per score 0–501)
         └── gray/           # Preprocessed grayscale versions
@@ -157,12 +161,21 @@ Helper functions cover specific checkout patterns:
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `GET` | `/` | Main calculator UI |
+| `GET` | `/` | The calculator: type a score, get the best finish and alternatives |
 | `POST` | `/` | Submit a score manually, returns rendered outshots |
+| `GET` | `/live` | Board follower: live score, best finish, reader diagnostics |
+| `GET` | `/api/ways/<score>` | Every checkout list for one score (JSON) |
 | `GET` | `/finishes` | Full finishes table (2–170) |
 | `GET` | `/api/outshot` | Current OCR score + suggested outshots (JSON) |
 | `POST` | `/api/set_field` | Switch OCR region (`{"field": 1}` or `{"field": 2}`) |
 | `GET` | `/api/current_field` | Returns active OCR field number |
+| `POST` | `/api/score` | Exact scores pushed by the browser extension |
+| `POST` | `/api/leg_end` | Fired when a score reaches 0 — pulses the LED ring |
+| `GET` | `/api/region_preview` | Live PNG of the current capture rectangle |
+| `GET` | `/training` | The training drills |
+| `GET` | `/api/throws` | Score-change feed (`?since=<id>`) behind the drills |
+| `GET`/`POST` | `/api/training/sessions` | List or save a finished training session |
+| `DELETE` | `/api/training/sessions/<id>` | Delete a saved session |
 
 ### `/api/outshot` response example
 
@@ -177,6 +190,66 @@ Helper functions cover specific checkout patterns:
   "raw": "99",
   "updated_ts": 1712345678.123
 }
+```
+
+---
+
+## Training modes
+
+Open `/training`. All three read the board through the Edge extension — there is
+nothing to type in while you throw.
+
+| Drill | Set the board to | What is measured |
+|-------|------------------|------------------|
+| **301 darts** | `9999` | A fixed block of darts (100 / 301 / 601) — what you average over it. No finish, no bust. |
+| **10 × 101** | `101` | Darts per leg over ten real legs, double out. A leg is counted when the board reads 0. |
+| **Random 20** | `9999` | A random three-number sequence each round, one dart at each; how much of it you actually hit. |
+
+The 9999 board is the trick that makes the first and third work: the leg never
+ends, so the board becomes a pure scoring surface and every visit shows up as a
+drop in the remaining score. `/api/throws` turns those drops back into throws.
+
+Every visit counts as three darts, whatever the board reports — a dart that
+scores nothing does not move the remaining score, so counting only what arrived
+would quietly drop it and flatter your average. A whole visit that scores
+nothing is still invisible, so each drill has a **Nothing scored** button for
+it. The block is set in darts but thrown in threes, so the last visit usually
+carries you a dart or two past 301; the average is taken over the darts you
+actually threw.
+
+**Random 20 is a sequence, not a number.** Each round draws three different
+numbers and you throw one dart at each, in the order shown — switching bed every
+dart, the way a real visit does, rather than repeating the same number three
+times.
+
+**Its draw comes from real match data.** `PRO_ATTEMPTS` in
+`templates/training.html` is how many darts the top 16 professionals *aimed* at
+each number over the 2019 season (trebles plus doubles at that number), from the
+dataset behind Haugh & Wang, *An Empirical Bayes Approach for Estimating Skill
+Models for Professional Darts Players*
+([arXiv:2302.10750](https://arxiv.org/abs/2302.10750), data at
+[wangchunsem/OptimalDarts](https://github.com/wangchunsem/OptimalDarts)). Raw,
+20 takes **71%** of every dart a professional aims, 19 another 16%, and 13 turns
+up once in three thousand — honest, but a poor practice hour. So:
+
+| Draw | What it does |
+|------|--------------|
+| **Practice** (default) | Those counts square-rooted: 20 ≈ 34%, 19 ≈ 16%, 18 ≈ 9%, then 17/16/10/8 off the finishing doubles, down to ≈ 0.7% for 13. Same order as the pros, but the numbers nobody practises still come up. |
+| **Pro** | The counts exactly as measured. Seven rounds in ten are a 20. |
+| **Even** | Every number equally likely. |
+
+Tagging which darts landed (a button under each number, or keys `1`–`3`, `0` for
+none) is optional, but it is what makes the hit rate and the "weakest numbers"
+table work — and it is per dart, because "2 of 3" cannot say *which* number you
+missed.
+
+Results are appended to `training_stats.json` next to the app — not to browser
+storage — so the history survives a cache clear and reads the same from a phone
+pointed at the app. The **Progress** tab charts each drill's headline number
+over time and flags personal bests.
+
+```bash
+node test_training.js   # exercises the drill logic against templates/training.html
 ```
 
 ---

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Finish IT app icon. Three darts: two bars and a dot. The dot is the finishing double.
+     Full-bleed square on purpose: iOS and Android apply their own corner mask. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Finish IT">
+  <rect width="1024" height="1024" fill="#0F1720"/>
+  <rect x="232" y="232" width="560" height="148" rx="74" fill="#F4F1EA"/>
+  <rect x="232" y="438" width="354" height="148" rx="74" fill="#F4F1EA"/>
+  <circle cx="306" cy="718" r="74" fill="#19D17F"/>
+</svg>

@@ -39,6 +39,12 @@
   const SCORE_SELECTOR = '[class*="styles_counter__"]';
 
   // -- OCR-A font (fallback path) --------------------------------------------
+  // Uniform digit shapes are what keep the screen-OCR fallback accurate, so
+  // the Scolia page gets the font forced onto everything. The app's own pages
+  // only want it on the numbers they OCR against -- the blanket rule used to
+  // apply there too and quietly overrode their Poppins/Oswald styling.
+  const ON_SCOLIA = location.hostname.endsWith("scoliadarts.com");
+
   const style = document.createElement("style");
   style.textContent = `
     @import url('https://fonts.cdnfonts.com/css/ocr-a-extended');
@@ -53,16 +59,16 @@
       font-family: 'OCR A Extended', 'OCR A Std', monospace !important;
       letter-spacing: 0.05em !important;
     }
-
+  ` + (ON_SCOLIA ? `
     /* Scolia (game.scoliadarts.com) */
     * {
       font-family: 'OCR A Extended', 'OCR A Std', monospace !important;
     }
-  `;
+  ` : "");
   document.head.appendChild(style);
 
   // The bridge only makes sense on the game page.
-  if (!location.hostname.endsWith("scoliadarts.com")) return;
+  if (!ON_SCOLIA) return;
 
   console.log(`[Finish IT] content script ${VERSION} loaded`);
 
@@ -90,13 +96,19 @@
 
   // Every visible leaf element whose entire text is a plausible darts score.
   // Our own overlay lives in a shadow root, so it can never match here.
+  //
+  // The ceiling is MAX_SCORE, not 501: the training drills are thrown on a
+  // board set to 9999 so the leg never ends and every visit shows up as a drop
+  // in the remaining score. Four digits have to get through for that to work.
+  const MAX_SCORE = 9999;
+
   function candidates() {
     const out = [];
     for (const el of document.querySelectorAll("*")) {
       if (el.children.length) continue;
       const t = (el.textContent || "").trim();
-      if (!/^\d{1,3}$/.test(t)) continue;
-      if (parseInt(t, 10) > 501) continue;
+      if (!/^\d{1,4}$/.test(t)) continue;
+      if (parseInt(t, 10) > MAX_SCORE) continue;
       if (!isVisible(el)) continue;
       out.push(describe(el));
     }
@@ -117,7 +129,7 @@
   function readScores() {
     const list = (SCORE_SELECTOR
       ? Array.from(document.querySelectorAll(SCORE_SELECTOR))
-             .filter(el => /^\d{1,3}$/.test((el.textContent || "").trim()) && isVisible(el))
+             .filter(el => /^\d{1,4}$/.test((el.textContent || "").trim()) && isVisible(el))
              .map(describe)
       : candidates()
     ).sort((a, b) => b.size - a.size);

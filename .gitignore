@@ -29,3 +29,7 @@ flutter_application_1/.vscode/
 flutter_application_1/build/
 flutter_application_1/.flutter-plugins-dependencies
 flutter_application_1/flutter_01.log
+
+# Training history written by the app
+training_stats.json
+training_stats.json.tmp
