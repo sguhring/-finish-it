@@ -1,32 +1,59 @@
-# 🎯 Finish IT — Dart Outshot Calculator
+<img src="static/icon-192.png" width="96" alt="Finish IT icon" align="right">
 
-A real-time dart outshot calculator with screen OCR, template matching, and a clean web UI. Point it at your darts scoreboard and it automatically reads your remaining score and suggests the best finishing combinations.
+# Finish IT — Dart Outshot Calculator
+
+Type a score and get the best way to finish it. Or let the app follow a live game on
+[Scolia](https://game.scoliadarts.com): it reads your remaining score as you throw, shows the
+checkout, and mirrors the situation on an LED ring around the board.
 
 ---
 
 ## Features
 
-- **Real-time OCR** — captures a screen region and reads the current score using template matching or Tesseract fallback
-- **Outshot calculator** — computes all valid 1-, 2-, and 3-dart finishes for scores 2–170
-- **Suggested paths** — curated preferred outshots ordered by difficulty and double target quality
-- **All finishes table** — browse every possible checkout from 2 to 170 at `/finishes`
-- **Field switcher** — supports two OCR capture regions (Field 1 / Field 2)
-- **Debounced score detection** — requires 2 consecutive matching reads before updating, reducing false positives
-- **Template matching engine** — fast matrix-based image fingerprinting (falls back to Tesseract if templates are missing)
-- **Training modes** — three drills at `/training`, scored straight off the board through the extension, with the history kept so you can see progress
+- **Calculator** (`/`) — type a score, get the best finish and the alternatives. Phone-first, light and dark, installable to a home screen
+- **Live follower** (`/live`) — follows the board and shows the finish for the current score, with the reader diagnostics one tap away
+- **Outshot logic** — every valid 1-, 2- and 3-dart finish for 2–170, with curated preferred paths
+- **All finishes table** — browse every checkout from 2 to 170 at `/finishes`
+- **Live score reading** — the app reads the remaining score off the screen by template matching, with Tesseract as a fallback
+- **LED status ring** — a WLED ring shows how far you are from a finish: red at 170 through to green near the double, blue when there is no checkout, a pulse when a leg is won
+- **Training modes** — three drills at `/training`, scored straight off the board, with the history kept so you can see progress
+
+---
+
+## The pages
+
+| Page | What it is for |
+|------|----------------|
+| `/` | **The calculator.** Score box, Calculate, the best finish, the alternatives as chips. Nothing on it touches the reader or the LEDs. Opens at a score with `/?score=121`. |
+| `/live` | **The board follower.** One big score, the best finish as three dart tiles, more ways in folds. Live mode follows the board; Type mode takes a score by hand. |
+| `/finishes` | The full checkout table, 2–170. |
+| `/training` | The three training drills and the progress history. |
+
+On a desktop browser the calculator draws a phone body around itself; on a real phone that frame
+drops away and the page fills the screen.
+
+**The look.** Ink on chalk, one typeface (Space Grotesk), and one rule: green is reserved for the
+finish. The double that ends a route is the only green thing on screen, so the answer is always
+where the eye lands. The icon is a calculator with a dart through it, with the dart as its one
+green element. `static/icon.svg` is the master; the PNG sizes next to it are exported from it.
 
 ---
 
 ## Project Structure
 
 ```
-├── app.py                  # Flask app — OCR loop, outshot logic, API routes
+├── app.py                  # Flask app — score reader, outshot logic, LED ring, API routes
 ├── capture_templates.py    # Manual template capture tool (live preview + keyboard controls)
 ├── auto_capture.py         # Automated template capture (0–501) via pyautogui
 ├── train.py                # CNN trainer for score classification (PyTorch)
 ├── test_ocr.py             # CLI tool to test OCR on a saved image file
+├── test_led.py             # Walks the LED ring through idle and the full score gradient
 ├── test_training.js        # Runs the training-drill logic under node (no browser)
 ├── show_region.py          # Debug tool — screenshots the current OCR region
+├── static/
+│   ├── icon.svg            # App icon master (calculator with a dart)
+│   ├── icon-*.png          # Exported sizes: 1024, 512, 192, 180
+│   └── manifest.webmanifest
 ├── templates/
 │   ├── index.html          # The calculator (phone-frame design)
 │   ├── live.html           # Board follower: live score + reader diagnostics
@@ -75,7 +102,8 @@ Tesseract OCR must also be installed separately:
 python app.py
 ```
 
-Open [http://localhost:5000](http://localhost:5000) in your browser.
+Open [http://localhost:5000](http://localhost:5000) for the calculator. That is all the
+calculator needs — the remaining steps are only for following a live game.
 
 ### 2. Calibrate the OCR region
 
@@ -169,7 +197,7 @@ Helper functions cover specific checkout patterns:
 | `GET` | `/api/outshot` | Current OCR score + suggested outshots (JSON) |
 | `POST` | `/api/set_field` | Switch OCR region (`{"field": 1}` or `{"field": 2}`) |
 | `GET` | `/api/current_field` | Returns active OCR field number |
-| `POST` | `/api/score` | Exact scores pushed by the browser extension |
+| `POST` | `/api/score` | Push an exact score to the app instead of reading the screen |
 | `POST` | `/api/leg_end` | Fired when a score reaches 0 — pulses the LED ring |
 | `GET` | `/api/region_preview` | Live PNG of the current capture rectangle |
 | `GET` | `/training` | The training drills |
@@ -188,15 +216,42 @@ Helper functions cover specific checkout patterns:
   "na_double_double_finishes": [],
   "single_double_double_finishes": [],
   "raw": "99",
-  "updated_ts": 1712345678.123
+  "updated_ts": 1712345678.123,
+  "source": "ocr",
+  "field": 2
 }
+```
+
+---
+
+## LED ring
+
+The app mirrors the checkout situation on a [WLED](https://kno.wled.ge/) ring around the board.
+It is optional: set `WLED_ENABLED = False` in `app.py` to switch it off.
+
+The light is two rings on one output, and they do different jobs:
+
+| Ring | Shows |
+|------|-------|
+| **Outer** | The status. A gradient from red at 170 to green at 2, blue when the score has no checkout, a rainbow when no game is running, and a bright pulse when a leg is won. |
+| **Inner** | A steady, dim light red in every state. It sits right at the board, so it stays out of the status display. |
+
+The ring only updates when the score changes, and the request runs on its own thread, so an
+unreachable ring never slows the score reader down.
+
+**If the ring ignores the app** and just plays its rainbow, the app is not reaching it. The ESP
+has a boot preset of its own, and its address changes with the network. Compare your PC's
+address with `WLED_HOST` in `app.py` first.
+
+```bash
+python test_led.py   # walks the ring through idle and the whole gradient; run with the app stopped
 ```
 
 ---
 
 ## Training modes
 
-Open `/training`. All three read the board through the Edge extension — there is
+Open `/training`. All three read the score straight off the board — there is
 nothing to type in while you throw.
 
 | Drill | Set the board to | What is measured |
@@ -265,6 +320,12 @@ Key constants in `app.py`:
 | `SAVE_OCR_DEBUG` | `False` | Save preprocessed images for Tesseract debugging |
 | `_REQUIRED_CONSECUTIVE` | `2` | Debounce: how many consecutive matching reads required |
 | `poll_s` | `0.35` | OCR polling interval in seconds |
+| `WLED_HOST` | `192.168.237.83` | Address of the LED ring's ESP. Changes with your network |
+| `WLED_ENABLED` | `True` | Set to `False` to run without the ring |
+| `WLED_BRIGHTNESS` | `160` | Outer ring brightness while a score is shown (0–255) |
+| `INNER_COLOUR` | `(255, 80, 70)` | The inner ring's steady light red |
+| `INNER_BRIGHTNESS` | `40` | Inner ring brightness, the same in every state (0–255) |
+| `WLED_INNER_SEGMENTS` | `(0,)` | Empty it to make the inner ring follow the outer one |
 
 ---
 
