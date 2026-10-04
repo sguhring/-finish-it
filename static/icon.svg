@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Finish IT app icon: the original calculator-and-dart idea (static/finishit_logo.svg),
+     redrawn in the brand style. Solid shapes so it survives small sizes; the dart is the
+     one green element, because green is reserved for the finish.
+     The dart is drawn as a dart, not an arrow: needle point, thick barrel, thin shaft, flights.
+     Full-bleed square on purpose: iOS and Android apply their own corner mask. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Finish IT">
+  <rect width="1024" height="1024" fill="#0F1720"/>
+
+  <!-- Calculator: chalk body, ink screen, ink keys -->
+  <rect x="322" y="212" width="380" height="600" rx="72" fill="#F4F1EA"/>
+  <rect x="372" y="264" width="280" height="128" rx="32" fill="#0F1720"/>
+  <g fill="#0F1720">
+    <rect x="372" y="446" width="72" height="72" rx="20"/><rect x="476" y="446" width="72" height="72" rx="20"/><rect x="580" y="446" width="72" height="72" rx="20"/>
+    <rect x="372" y="550" width="72" height="72" rx="20"/><rect x="476" y="550" width="72" height="72" rx="20"/><rect x="580" y="550" width="72" height="72" rx="20"/>
+    <rect x="372" y="654" width="72" height="72" rx="20"/><rect x="476" y="654" width="72" height="72" rx="20"/><rect x="580" y="654" width="72" height="72" rx="20"/>
+  </g>
+
+  <!-- Ink halo under the dart, so it separates cleanly from the chalk body -->
+  <g fill="#0F1720" stroke="#0F1720" stroke-linejoin="round" stroke-linecap="round">
+    <line x1="222" y1="802" x2="512" y2="512" stroke-width="88"/>
+    <line x1="512" y1="512" x2="682" y2="342" stroke-width="140"/>
+    <path d="M823 201 L701 347 L677 323 Z" stroke-width="48"/>
+    <path d="M321 703 L222 802 L247 897 L346 798 Z" stroke-width="52"/>
+    <path d="M321 703 L222 802 L127 777 L226 678 Z" stroke-width="52"/>
+  </g>
+
+  <!-- The dart: flights, shaft, barrel, point -->
+  <g fill="#19D17F" stroke="#19D17F" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M321 703 L222 802 L127 777 L226 678 Z" stroke-width="16" opacity=".78"/>
+    <path d="M321 703 L222 802 L247 897 L346 798 Z" stroke-width="16"/>
+    <line x1="222" y1="802" x2="512" y2="512" stroke-width="36"/>
+    <line x1="512" y1="512" x2="682" y2="342" stroke-width="88"/>
+    <path d="M823 201 L701 347 L677 323 Z" stroke-width="10"/>
+  </g>
+</svg>

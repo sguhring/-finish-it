@@ -22,7 +22,9 @@ print("  " + "-" * 44)
 
 for V in SCORES:
     state = app.score_state(V)
-    seg = state["seg"][0]
+    # Der innere Ring leuchtet konstant (app.WLED_INNER_SEGMENTS) -- die
+    # Anzeige steckt im ersten aeusseren Segment.
+    seg = next(s for s in state["seg"] if s["id"] not in app.WLED_INNER_SEGMENTS)
     if V is None:
         note = f"Ruhezustand — Effekt {seg['fx']}, Palette {seg['pal']}"
         hold = 5.0

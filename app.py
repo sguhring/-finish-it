@@ -9,6 +9,8 @@ import json
 import queue
 import colorsys
 import urllib.request
+import uuid
+from collections import deque
 
 import mss
 import cv2
@@ -154,6 +156,60 @@ latest_source = "none"    # "push" | "ocr" | "none"
 
 
 # ---------------------------------------------------------------------------
+# Training throw feed
+#
+# The board only ever reports an *absolute* remaining score. Everything the
+# training modes need — what was scored, how many visits it took — is the
+# difference between two consecutive readings, so the reader turns that stream
+# of absolute values into a stream of change events with a monotonic id.
+#
+# Deriving it here rather than in the browser matters: the page polls slower
+# than the reader does, and a reload would lose its place. With an id per event
+# a page just asks for "everything after N" and cannot miss a throw.
+#
+# A drop of 1..180 is a score. Anything else — the score going *up* — is a new
+# leg, a bust that Scolia reverted, or the board being reset, and is emitted as
+# a "reset" so a mode can react to it instead of counting it as a throw.
+#
+# Note this is per *change*, not per visit: whether Scolia updates the counter
+# once per dart or once per visit, this reports what actually changed and the
+# client groups changes into visits by the gap between them.
+# ---------------------------------------------------------------------------
+
+MAX_PUSH_SCORE   = 9999   # a 9999 practice board, not just a 501 leg
+THROW_MAX_POINTS = 180    # the most three darts can score
+THROW_HISTORY    = 500    # ring buffer depth; a long session still fits
+
+_throw_events: deque = deque(maxlen=THROW_HISTORY)
+_throw_seq = 0
+_throw_last: dict[int, int | None] = {1: None, 2: None}
+
+
+def _feed_training(field: int, value: int | None, ts: float) -> None:
+    """Record one absolute reading and emit an event if it changed.
+
+    Called from ocr_loop() with `lock` already held.
+    """
+    global _throw_seq
+    prev = _throw_last.get(field)
+    _throw_last[field] = value
+    if value is None or prev is None or value == prev:
+        return
+
+    delta = prev - value
+    if 1 <= delta <= THROW_MAX_POINTS:
+        kind, points = "throw", delta
+    else:
+        kind, points = "reset", None
+
+    _throw_seq += 1
+    _throw_events.append({
+        "id": _throw_seq, "ts": ts, "field": field,
+        "kind": kind, "before": prev, "after": value, "points": points,
+    })
+
+
+# ---------------------------------------------------------------------------
 # WLED status light
 #
 # Mirrors the current checkout situation on an RGB strip around the board.
@@ -162,10 +218,23 @@ latest_source = "none"    # "push" | "ocr" | "none"
 # unreachable ESP can never stall the OCR reader.
 # ---------------------------------------------------------------------------
 
-WLED_HOST = "192.168.8.83"
+WLED_HOST = "192.168.237.83"
 WLED_ENABLED = True
 WLED_BRIGHTNESS = 160        # 0-255; WLED still applies its own current limit
 WLED_TIMEOUT_S = 0.6
+
+# Two rings on one output, inner first: the inner ring is LEDs 0-107, the
+# original outer ring 108-245. Each is its own segment (set up on the device),
+# so an effect like the rainbow runs round each ring instead of across the join.
+WLED_SEGMENTS = (0, 1)          # 0 = inner ring, 1 = outer ring
+
+# The inner ring sits right at the board, so it does not take part in the
+# status display: it holds one steady, dim, light red whatever the outer ring is
+# doing -- score colour, idle rainbow or the leg-end pulse. Empty the tuple to
+# make the inner ring follow the outer one again.
+WLED_INNER_SEGMENTS = (0,)
+INNER_COLOUR     = (255, 80, 70)    # light red: red with a little white in it
+INNER_BRIGHTNESS = 40               # 0-255, as seen on the ring (see _rings)
 
 # Scores with no valid 3-dart checkout (also used by print_solution)
 NO_CHECKOUT_SCORES = frozenset({159, 162, 163, 165, 166, 168, 169})
@@ -219,17 +288,32 @@ def score_colour(V) -> tuple[int, int, int]:
     return (round(r * 255), round(g * 255), round(b * 255))
 
 
+def _rings(master_bri: int, **seg) -> list[dict]:
+    """Segment settings for every ring: `seg` for the status rings, the steady
+    light red for the inner ones.
+
+    WLED multiplies a segment's own `bri` by the master `bri`, and the master
+    changes with the state (idle 90, score 160, pulse 255). The inner ring's
+    segment brightness is therefore scaled the other way, so it looks equally
+    dim in all three instead of flaring up with the pulse.
+    """
+    inner_bri = max(1, min(255, round(INNER_BRIGHTNESS * 255 / max(1, master_bri))))
+    inner = {"fx": 0, "bri": inner_bri, "col": [list(INNER_COLOUR)]}
+    return [{"id": i, **(inner if i in WLED_INNER_SEGMENTS else {"bri": 255, **seg})}
+            for i in WLED_SEGMENTS]
+
+
 def score_state(V) -> dict:
     """Build the WLED state for a score, or the idle animation when there is none."""
     if V is None:
         return {
             "on": True, "bri": IDLE_BRIGHTNESS,
-            "seg": [{"id": 0, "fx": IDLE_EFFECT, "pal": IDLE_PALETTE,
-                     "sx": IDLE_SPEED, "ix": 128}],
+            "seg": _rings(IDLE_BRIGHTNESS, fx=IDLE_EFFECT, pal=IDLE_PALETTE,
+                          sx=IDLE_SPEED, ix=128),
         }
     return {
         "on": True, "bri": WLED_BRIGHTNESS,
-        "seg": [{"id": 0, "fx": 0, "col": [list(score_colour(V))]}],
+        "seg": _rings(WLED_BRIGHTNESS, fx=0, col=[list(score_colour(V))]),
     }
 
 
@@ -237,8 +321,8 @@ def pulse_state() -> dict:
     """Build the WLED state for the leg-end pulse."""
     return {
         "on": True, "bri": PULSE_BRIGHTNESS,
-        "seg": [{"id": 0, "fx": PULSE_EFFECT, "sx": PULSE_SPEED, "ix": 255,
-                 "col": [list(PULSE_COLOUR)]}],
+        "seg": _rings(PULSE_BRIGHTNESS, fx=PULSE_EFFECT, sx=PULSE_SPEED, ix=255,
+                      col=[list(PULSE_COLOUR)]),
     }
 
 
@@ -469,6 +553,12 @@ def ocr_loop(poll_s: float = 0.35):
                     latest_updated_ts = time.time()
                     latest_source     = "push"
                     _score_now        = latest_score
+                    # Both fields, not just the selected one: in "single"
+                    # layout the extension pushes the same value to both, and
+                    # a training session that starts on the other field still
+                    # wants an unbroken history behind it.
+                    for _f in (1, 2):
+                        _feed_training(_f, pushed_scores.get(_f), latest_updated_ts)
             else:
                 score, raw = ocr_read_score_region()
                 # Debounce: only accept a score after it appears 3 consecutive times
@@ -494,6 +584,7 @@ def ocr_loop(poll_s: float = 0.35):
                     latest_updated_ts = time.time()
                     latest_source     = "ocr"
                     _score_now        = latest_score
+                    _feed_training(field_now, latest_score, latest_updated_ts)
 
             # Outside the lock: the status light must never hold up OCR.
             #
@@ -1116,12 +1207,18 @@ def _cors(resp):
 
 
 def _clean_score(v):
-    """Accept only plausible darts scores; anything else is dropped."""
+    """Accept only plausible darts scores; anything else is dropped.
+
+    The ceiling is MAX_PUSH_SCORE, not 501, because the training modes are
+    thrown on a Scolia board set to 9999: that board never finishes, so it can
+    be used as a pure scoring surface and every visit shows up as a drop in the
+    remaining score. A 501 ceiling would silently reject every one of them.
+    """
     try:
         v = int(v)
     except (TypeError, ValueError):
         return None
-    return v if 0 <= v <= 501 else None
+    return v if 0 <= v <= MAX_PUSH_SCORE else None
 
 
 @app.route('/api/score', methods=['POST', 'OPTIONS'])
@@ -1204,30 +1301,174 @@ def api_region_preview():
         return f"capture error: {e}", 500
 
 
+# ---------------------------------------------------------------------------
+# Training: session store and routes
+#
+# Three drills, all thrown on the real board and read through the extension:
+#
+#   301       — score 301 points in as few throws as possible (board on 9999).
+#   legs101   — ten legs of 101, double out (board on 101), darts per leg.
+#   random20  — a weighted random target 1-20 per round; how well you hit it.
+#
+# Results live in a plain JSON file next to the app rather than in the browser,
+# so the history survives a cache clear and is the same whether the page is
+# open on this PC or on a phone pointed at it. The server deliberately does not
+# understand the per-mode `stats` blob — it stores what the mode computed, so a
+# new drill needs no schema change here.
+# ---------------------------------------------------------------------------
+
+TRAINING_FILE = os.path.join(os.path.dirname(__file__), "training_stats.json")
+TRAINING_MODES = ("301", "legs101", "random20")
+TRAINING_MAX_SESSIONS = 2000
+_training_lock = threading.Lock()
+
+
+def _training_load() -> list[dict]:
+    """Read the session list; a missing or corrupt file reads as empty."""
+    try:
+        with open(TRAINING_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (FileNotFoundError, ValueError, OSError):
+        return []
+    sessions = data.get("sessions") if isinstance(data, dict) else data
+    return sessions if isinstance(sessions, list) else []
+
+
+def _training_store(sessions: list[dict]) -> None:
+    """Write the session list atomically, so a crash cannot truncate history."""
+    tmp = TRAINING_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"version": 1, "sessions": sessions}, fh, indent=1)
+    os.replace(tmp, TRAINING_FILE)
+
+
+@app.route('/api/throws')
+def api_throws():
+    """The change feed behind every training mode.
+
+    `since` is the last event id the caller already has; -1 (the default) means
+    "I am starting fresh, do not replay history" and returns just the current
+    sequence number to continue from.
+    """
+    try:
+        since = int(request.args.get("since", -1))
+    except (TypeError, ValueError):
+        since = -1
+    field_arg = request.args.get("field")
+
+    with lock:
+        events = [] if since < 0 else [e for e in _throw_events if e["id"] > since]
+        if field_arg in ("1", "2"):
+            want = int(field_arg)
+            events = [e for e in events if e["field"] == want]
+        return jsonify({
+            "ok": True,
+            "seq": _throw_seq,
+            "events": events,
+            "score": latest_score,
+            "field": current_field,
+            "source": latest_source,
+            "updated_ts": latest_updated_ts,
+        })
+
+
+@app.route('/api/training/sessions', methods=['GET', 'POST'])
+def api_training_sessions():
+    if request.method == 'GET':
+        with _training_lock:
+            return jsonify({"ok": True, "sessions": _training_load()})
+
+    data = request.get_json(silent=True) or {}
+    mode = str(data.get("mode", ""))
+    if mode not in TRAINING_MODES:
+        return jsonify({"ok": False, "message": f"unknown mode {mode!r}"}), 400
+
+    now = time.time()
+    entry = {
+        "id":         uuid.uuid4().hex[:12],
+        "mode":       mode,
+        "started_ts": float(data.get("started_ts") or now),
+        "ended_ts":   float(data.get("ended_ts") or now),
+        "saved_ts":   now,
+        "stats":      data.get("stats")  if isinstance(data.get("stats"), dict)  else {},
+        "detail":     data.get("detail") if isinstance(data.get("detail"), list) else [],
+    }
+    with _training_lock:
+        sessions = _training_load()
+        sessions.append(entry)
+        del sessions[:-TRAINING_MAX_SESSIONS]
+        _training_store(sessions)
+    return jsonify({"ok": True, "session": entry})
+
+
+@app.route('/api/training/sessions/<sid>', methods=['DELETE'])
+def api_training_delete(sid):
+    with _training_lock:
+        sessions = _training_load()
+        kept = [s for s in sessions if s.get("id") != sid]
+        if len(kept) == len(sessions):
+            return jsonify({"ok": False, "message": "no such session"}), 404
+        _training_store(kept)
+    return jsonify({"ok": True, "removed": sid})
+
+
+@app.route('/training')
+def training():
+    return render_template('training.html')
+
+
+def _ways_payload(V: int) -> dict:
+    """Every list the outshot page shows for one score, as plain JSON-able data.
+
+    Shared by the server-rendered POST form and ``/api/ways`` so the phone page
+    can render from data instead of re-fetching the whole HTML.
+    """
+    all_np = calculate_output(V)
+    message = print_solution(V)
+    suggested = _ways_to_list(suggested_ways(V, all_ways=all_np))
+    # The filtered list minus the rows already shown as suggested.
+    alternatives = [row for row in _ways_to_list(all_np) if row not in suggested]
+    return {
+        "score":        int(V),
+        "message":      message,
+        "possible":     message != "No possible outshot",
+        "suggested":    suggested,
+        "alternatives": alternatives,
+        "all_ways":     _ways_to_list(calculate_output(V, pre_filter=True)),
+        "na_dd":        _ways_to_list(na_double_double_finishes(V, all_ways=all_np)),
+        "sdd":          _ways_to_list(single_double_double_finishes(V, all_ways=all_np)),
+    }
+
+
+@app.route('/api/ways/<int:score>')
+def api_ways(score: int):
+    """Checkout lists for an arbitrary score (0..MAX_PUSH_SCORE)."""
+    if not 0 <= score <= MAX_PUSH_SCORE:
+        return jsonify({"ok": False, "message": f"score must be 0..{MAX_PUSH_SCORE}"}), 400
+    return jsonify({"ok": True, **_ways_payload(score)})
+
+
+def _posted_ways():
+    """The ways payload for a score POSTed by the no-JS form, else None."""
+    if request.method != 'POST':
+        return None
+    try:
+        V = int(request.form.get('input_value', ''))
+    except ValueError:
+        return None
+    return _ways_payload(V) if 0 <= V <= MAX_PUSH_SCORE else None
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    output_value = preferred_ways_result = print_solution_message = None
-    suggested_ways_result = na_double_double_result = single_double_double_result = []
+    """The calculator: type a score, get the finish. Nothing live on this page."""
+    return render_template('index.html', initial=_posted_ways())
 
-    if request.method == 'POST':
-        V = int(request.form['input_value'])
-        output_np                   = calculate_output(V)
-        output_value                = _ways_to_list(calculate_output(V, pre_filter=True))
-        preferred_ways_result       = _ways_to_list(output_np)
-        print_solution_message      = print_solution(V)
-        suggested_ways_result       = _ways_to_list(suggested_ways(V, all_ways=output_np))
-        na_double_double_result     = _ways_to_list(na_double_double_finishes(V, all_ways=output_np))
-        single_double_double_result = _ways_to_list(single_double_double_finishes(V, all_ways=output_np))
 
-    return render_template(
-        'index.html',
-        output_value=output_value,
-        preferred_ways=preferred_ways_result,
-        print_solution_message=print_solution_message,
-        suggested_ways=suggested_ways_result,
-        na_double_double_finishes=na_double_double_result,
-        single_double_double_finishes=single_double_double_result,
-    )
+@app.route('/live', methods=['GET', 'POST'])
+def live():
+    """The board follower: polls the reader and shows the finish for the live score."""
+    return render_template('live.html', initial=_posted_ways())
 
 
 # === App entry point ===
