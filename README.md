@@ -2,9 +2,8 @@
 
 # Finish IT — Dart Outshot Calculator
 
-Type a score and get the best way to finish it. Or let the app follow a live game on
-[Scolia](https://game.scoliadarts.com): it reads your remaining score as you throw, shows the
-checkout, and mirrors the situation on an LED ring around the board.
+Type a score and get the best way to finish it. Or let the app follow a live game: it reads your remaining score as you throw, shows the
+checkout.
 
 ---
 
