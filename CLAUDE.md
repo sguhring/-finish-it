@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Flask web app ("Finish IT") that reads a darts score off the screen via OCR and shows the
 recommended 3-dart checkout ("outshot") combinations for that score. It is designed to run
-alongside the online darts game at `game.scoliadarts.com`: the app screenshots the score region,
-OCRs the number, and a browser polls it for live finish suggestions.
+alongside a browser-based darts scoring page: a browser extension reads the score out of the page
+(or the app screenshots the score region and OCRs it), and a browser polls the app for live
+finish suggestions.
 
 Everything of substance lives in `app.py`. The other top-level `.py` files are tooling and
 one-off scripts. The `flutter/`, `flutter_application_1/`, and `venv/` directories are
@@ -19,6 +20,10 @@ unrelated/local checkouts (mostly gitignored) — ignore them.
 # Run the app — Flask dev server on http://127.0.0.1:5000. The OCR background
 # thread starts automatically. Requires a live score visible on screen to read.
 python app.py
+
+# Package the app as dist/FinishIT.exe (PyInstaller, one file, ~77 MB). Bundles
+# templates/, static/, templates_capture/; not Tesseract, not the extension.
+python build_exe.py
 
 # Capture template images (the primary OCR method — see below)
 python auto_capture.py        # automated: drives the browser via pyautogui, loops 0..501
@@ -40,9 +45,21 @@ python train.py               # train ScoreCNN -> darts_ocr.pth
 There is otherwise no test runner, linter, or `requirements.txt`. `test_ocr.py`, `show_region.py`, and the
 `debug_*.png` / `ocr_debug*.png` files are manual OCR-calibration scratch (the PNGs are gitignored).
 
+### Running as the exe
+`app.py` detects PyInstaller (`FROZEN`): bundled files are read from `RESOURCE_DIR`
+(`sys._MEIPASS`), while `training_stats.json` and the optional settings file `finishit.json`
+(`wled_enabled`, `wled_host`, `tesseract_cmd`) live in `DATA_DIR`, next to the exe. The exe runs
+without the debug reloader and opens `/live` in the browser. `finishit.json` is **gitignored**
+and read in script runs too (next to `app.py`); `build_exe.py` copies it into `dist/` if present.
+The LED light is **off unless `finishit.json` sets both `wled_enabled` and `wled_host`**, so no
+copy (exe or clone) ever POSTs to some IP on someone else's network, and no address is in the repo.
+`FINISHIT_PORT` / `FINISHIT_NO_BROWSER` exist only to smoke-test a build next to a running copy;
+the extension always talks to port 5000.
+
 ### External dependencies (not pip-managed here)
-- **Tesseract** must be installed at the hardcoded path `C:\Program Files\Tesseract-OCR\tesseract.exe`
-  (`app.py`, `ocr_throws.py`). Windows-only as written.
+- **Tesseract** is optional for `app.py`: looked up from `finishit.json`, then
+  `C:\Program Files\Tesseract-OCR\tesseract.exe`, then `PATH`. Without it the OCR fallback is
+  template matching only. `ocr_throws.py` still hardcodes the path. Windows-only as written.
 - Python deps used: `flask`, `numpy`, `opencv-python` (cv2), `mss`, `pytesseract`; capture/training
   also need `pyautogui`, `pyperclip`, `torch`, `torchvision`, `pillow`.
 
@@ -53,7 +70,7 @@ There is otherwise no test runner, linter, or `requirements.txt`. `test_ocr.py`,
 ### 1. Score reader (background thread) — push first, OCR as fallback
 `ocr_loop()` runs as a daemon thread polling every ~0.35 s, and writes `latest_score` /
 `latest_raw_text` / `latest_source`. Each iteration it first checks for a **pushed** score:
-the Edge extension reads both players' scores out of the Scolia DOM and POSTs them to
+the Edge extension reads the picked score elements out of the game page's DOM and POSTs them to
 `/api/score`, which stores them in `pushed_scores` + `pushed_ts`. While a push is younger than
 `PUSH_TTL_S` (5 s) the loop uses `pushed_scores[current_field]` verbatim — exact, no debounce,
 no screen grab, no template matmul — and sets `latest_source = "push"`. Only once pushes go
@@ -96,9 +113,10 @@ These per-score filters and the `_SUGGESTED_ROWS` indices are darts-domain heuri
 combination ordering in `calculate_output` will silently break the `_SUGGESTED_ROWS` index lookups,
 which reference specific row positions.
 
-### 3. WLED status light (background thread)
-`ocr_loop()` mirrors the checkout situation on an addressable LED ring around the Scolia surround
-(WLED at `WLED_HOST`, currently `192.168.237.83`; set `WLED_ENABLED = False` to switch it off).
+### 3. WLED status light (background thread, optional, not part of the public pitch)
+`ocr_loop()` can mirror the checkout situation on an addressable LED ring around the board
+(WLED at `WLED_HOST`, which comes only from the local `finishit.json`; without it the light is
+off). The README deliberately leaves the light out; keep it that way.
 The light is **two rings on one output** (GPIO2, 246 LEDs), inner first: segment 0 is the inner
 ring (LEDs 0–107), segment 1 the original outer ring (108–245). The segments are set up on the
 device and saved in its boot preset; `WLED_SEGMENTS` in `app.py` lists them. Adding strips means
@@ -141,16 +159,16 @@ logic is client-side; `app.py` only supplies events and stores results.
 push path and for the selected field on the OCR path) diffs consecutive readings
 into `_throw_events`, a 500-deep deque of `{id, ts, field, kind, before, after,
 points}`. A drop of 1..180 is a `throw`; anything else — the score going *up* —
-is a `reset` (new leg, a bust Scolia reverted, board reset). `GET /api/throws?
+is a `reset` (new leg, a bust the board reverted, board reset). `GET /api/throws?
 since=<id>` serves everything after an id, so the page cannot miss a throw
 between its slower polls and a reload just resumes. `since=-1` means "starting
 fresh, do not replay".
 
 > Events are emitted **per field**, and the extension pushes the same number to
-> both fields whenever Scolia shows one player — so a consumer that does not
+> both fields whenever the page shows one player — so a consumer that does not
 > filter on the selected field counts every throw twice.
 
-**Visits vs. darts.** Whether Scolia updates its counter once per dart or once
+**Visits vs. darts.** Whether a scoring page updates its counter once per dart or once
 per visit is not knowable from the numbers, so the client does not assume:
 `feedChange()` groups changes into a visit by the gap between them, and the gap
 depends on **which reader the feed came from**, because that decides how fast a
@@ -187,7 +205,7 @@ a flag learned on the wrong board instead of leaving it stuck for good.
   average is taken over the darts actually thrown. A whole visit that scores
   nothing stays invisible to the board, which is what the "Nothing scored"
   button on all three drills is for.
-- **10 × 101** — board on `101`, Scolia runs the legs for real. A leg closes when
+- **10 × 101** — board on `101`, the scoring board runs the legs for real. A leg closes when
   the board reads **0**; the next one arms on the following `reset`. A `reset`
   *mid*-leg is a bust, which is why a rise only means "new leg" once the leg has
   actually been won. The winning visit is assumed to be 3 darts until tagged
@@ -304,49 +322,58 @@ Static assets in `static/`; the `templates/` dir is Flask Jinja templates (disti
 `templates_capture/`, which holds OCR reference images).
 
 ### Edge extension (`edge-extension/`)
-A Manifest V3 content script doing four jobs on `game.scoliadarts.com`:
+A Manifest V3 content script for any browser-based scoring page. **No site is built in**: the
+repo names no scoring service, and the bridge stays silent on a page until the user has picked
+its score element (job 5). Then it does four jobs there:
 
-1. **The score bridge** (primary): every 250 ms it reads the two score elements out of the DOM and
-   POSTs them to `http://127.0.0.1:5000/api/score`, with a 2 s heartbeat so an unchanged score
-   keeps push mode alive.
+1. **The score bridge** (primary): every 250 ms it reads the picked score element(s) out of the DOM
+   and POSTs them to `http://127.0.0.1:5000/api/score`, with a 2 s heartbeat so an unchanged score
+   keeps push mode alive. It logs what it reads to the page console once.
 
-   `SCORE_SELECTOR` is **pinned** to `[class*="styles_counter__"]` — Scolia's remaining-score
-   element is `span.styles_counter__ZHHHQ`, and the trailing hash is generated by CSS Modules and
-   moves on every Scolia rebuild, hence the prefix match. Clear `SCORE_SELECTOR` to fall back to
-   the old heuristic (visible leaf elements whose whole text is a 1–3 digit number ≤ 501, the two
-   largest by font size). Either way it logs its picks to the page console.
+   A pick beats any font-size heuristic: when the counters vanish at the end of a game,
+   `readScores()` returns nothing and the app falls back to OCR, instead of latching onto
+   leftover statistics and pushing them as live scores (which the old heuristic did).
 
-   Pinning matters beyond tidiness: with the heuristic, the counters vanishing at the end of a game
-   left it latching onto leftover statistics and pushing them as live scores. Pinned, `readScores()`
-   returns nothing there and the app falls back to OCR instead.
-
-   Scolia normally shows **one** player at a time, so a single number drawn far larger than
-   anything else (`DOMINANT_RATIO` = 1.35× the runner-up) is treated as *the* score and pushed
-   to both fields. A genuine side-by-side layout still maps leftmost → field 1. Anything more
-   ambiguous pushes nothing, so the app falls back to OCR rather than guessing.
+   With **one** picked selector, a page that shows one player at a time gives a single number
+   drawn far larger than anything else (`DOMINANT_RATIO` = 1.35× the runner-up); it is treated as
+   *the* score and pushed to both fields. If the selector matches two comparable elements, the
+   leftmost maps to field 1. With **two** picks (player 1, player 2) there is no guessing at all.
 2. **The on-page overlay**: a draggable panel in a shadow root (so it can never match its own
    score heuristic) that polls `/api/outshot` every 600 ms and draws the checkout suggestions
    onto the game page — no second window needed. Its P1/P2/AUTO buttons drive `/api/set_field`.
-   In **AUTO** (the default) it stops caring which button is pressed and follows whichever player
-   the page is showing, identified by name; names are mapped to fields in the order first seen
-   and remembered in `localStorage`. Pinning P1 or P2 leaves AUTO; double-clicking AUTO forgets
-   the learned names.
+   In **AUTO** (the default) with a one-score pick it stops caring which button is pressed and
+   follows whichever player the page is showing, identified by the largest name-like text; names
+   are mapped to fields in the order first seen and remembered in `localStorage`. Pinning P1 or
+   P2 leaves AUTO (do that on a page where the largest text is a menu, not a name);
+   double-clicking AUTO forgets the learned names.
 3. **Leg-end detection**: when either score reads 0 it POSTs `/api/leg_end` once, then re-arms
    only after a real remaining score is back — the 0 stands for several seconds, so without that
    latch every tick during it would fire again.
 
-   Hooked to the score reaching 0 rather than to any UI marker on purpose. A DOM capture of a live
-   leg showed `div.styles_isFinished__uTh81` ("Finished") looks like the signal but appears after
-   every visit to the oche, twice per leg, alongside "Removing darts..."; `Finish & View Stats` and
-   the `Game` label appear only at the end of a *match*. The score hitting 0 is the only marker
-   that fires exactly once per leg regardless of leg number or match state.
-4. **OCR-A font injection** (fallback support): makes on-screen digits uniform so the screen-OCR
-   fallback stays accurate. If OCR accuracy regresses, check this is still active.
+   Hooked to the score reaching 0 rather than to any UI marker on purpose. Scoring pages tend to
+   show a "Finished"-style marker after every visit to the board (several times per leg) and an
+   end-of-match marker only once per match. The score hitting 0 is the only signal that fires
+   exactly once per leg regardless of leg number or match state.
+4. **OCR-A font injection** (fallback support): makes the digits uniform so the screen-OCR
+   fallback stays accurate. On a game page the rule covers only the picked score elements
+   (`setFontRules()`, rebuilt whenever the picks change), so the rest of the site keeps its fonts;
+   nothing is injected and the font is never fetched before there is a pick. On the app's own
+   pages (`127.0.0.1:5000`) it touches only the score elements the app renders, never the
+   Poppins/Oswald styling around them. If OCR accuracy regresses, check this is still active.
 
-   The blanket `* { font-family: ... !important }` rule is scoped to Scolia
-   (`ON_SCOLIA`). The content script also runs on `127.0.0.1:5000`, where that rule
-   used to override the app's own Poppins/Oswald styling; there it now only touches
-   the specific score elements it needs uniform.
+5. **The element picker**: the bridge stays silent on a page until the user clicks *Select score
+   element* in the popup. That injects `content.js` + `pick.js` via `activeTab`, and the user
+   clicks the score (and optionally the second player's). `buildSelector()` turns each click into
+   a selector that avoids the number itself and generated classes, and cuts CSS Modules hashes
+   down to a `[class*="prefix__"]` match, since the hash moves on every build of the site. The
+   picks are stored per host in `chrome.storage.sync` (`finishit.sites`); when a site rebuilds and
+   the score moves, re-picking fixes it. The same click requests an optional host permission for
+   the site; `background.js` registers `content.js` on every granted host so the pick comes back
+   on the next visit. The popup shows what the tab reads, and *lost* when the element has
+   vanished for 3 s.
+
+> Keep scoring services out of this repo: no site names, hostnames, logos or per-site presets in
+> code, docs or assets. Site specifics belong in the user's own picks (browser storage), not here.
 
 Both score filters accept **four** digits, not three, so a board set to 9999 for the
 training drills is read rather than ignored.

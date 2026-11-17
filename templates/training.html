@@ -284,7 +284,7 @@
     <div class="card" id="m301-setup">
       <h2>301 darts</h2>
       <p class="sub">A fixed block of darts at whatever you want to score on. Nothing to finish, nothing to bust &mdash; what comes out at the end is your 3-dart average over the block.</p>
-      <div class="hint">Set the Scolia board to <b>9999</b> so the leg never ends. Every visit then shows up here as a drop in the remaining score.</div>
+      <div class="hint">Start a game at <b>9999</b> on your scoring board so the leg never ends. Every visit then shows up here as a drop in the remaining score.</div>
       <div class="opt-row">
         <span class="opt-label">Block</span>
         <div class="seg" id="m301-block">
@@ -330,7 +330,7 @@
     <div class="card" id="mlegs-setup">
       <h2>10 legs of 101</h2>
       <p class="sub">A real leg every time: 101 down to nothing on a double. The number that matters is your average darts per leg.</p>
-      <div class="hint">Set the Scolia board to <b>101</b> and let it run the legs properly. A leg counts the moment the board reads <b>0</b>.</div>
+      <div class="hint">Start a game at <b>101</b> on your scoring board and let it run the legs properly. A leg counts the moment the board reads <b>0</b>.</div>
       <div class="opt-row">
         <span class="opt-label">Legs</span>
         <div class="seg" id="mlegs-count">
@@ -387,7 +387,7 @@
     <div class="card" id="mrand-setup">
       <h2>Random 20 &mdash; three-dart sequence</h2>
       <p class="sub">Three numbers appear. One dart at each, in the order shown &mdash; the switch between beds is the skill, not repeating the same number. The numbers you actually meet in a game come up far more often than the ones you never aim at.</p>
-      <div class="hint">Set the Scolia board to <b>9999</b>. Each visit scores the round and turns over the next sequence.</div>
+      <div class="hint">Start a game at <b>9999</b> on your scoring board. Each visit scores the round and turns over the next sequence.</div>
       <div class="opt-row">
         <span class="opt-label">Rounds</span>
         <div class="seg" id="mrand-rounds">
@@ -510,7 +510,7 @@ function segment(sel, onChange) {
    /api/throws hands out score *changes* with a monotonic id, so nothing is
    missed between polls and a reload just picks up where it left off.
 
-   Whether Scolia updates its counter once per dart or once per visit is not
+   Whether the scoring page updates its counter once per dart or once per visit is not
    something we can know from the numbers alone, so the grouper does not try
    to: it closes a visit on the gap between changes. Within a visit darts land
    a second or so apart; between visits there is always the walk to the board
@@ -622,7 +622,7 @@ async function poll() {
     feed.field  = d.field;
     feed.source = d.source;
     // The reader emits an event per field, and the extension pushes the same
-    // number to both fields whenever Scolia is showing one player. Taking only
+    // number to both fields whenever the page is showing one player. Taking only
     // the selected field is what stops every throw being counted twice.
     for (const e of d.events) {
       if (e.field !== d.field) continue;
@@ -905,12 +905,12 @@ $("#m301-zero").onclick  = () => m301.add(0);
 /* =========================================================================
    Mode 2 -- ten legs of 101
    -------------------------------------------------------------------------
-   Scolia runs these legs for real, so the board itself enforces the double
+   The scoring board runs these legs for real, so it enforces the double
    and the bust. All this has to do is watch: throws come off the feed, the
    leg is over when the board reads 0, and the next one starts when the score
    climbs back up.
 
-   A bust mid-leg also shows as the score climbing -- Scolia puts it back --
+   A bust mid-leg also shows as the score climbing -- the board puts it back --
    which is why a rise is only a new leg once the leg has actually been won.
    ========================================================================= */
 const mlegs = {
@@ -965,7 +965,7 @@ const mlegs = {
       this.awaitingReset = false;
       $("#mlegs-sub").textContent = "next leg — throw when ready";
     } else if (e.after <= this.startScore) {
-      // Score went back up mid-leg: Scolia reverted a bust.
+      // Score went back up mid-leg: the board reverted a bust.
       this.curThrows++;
       this.curBusts++;
       this.busts++;
