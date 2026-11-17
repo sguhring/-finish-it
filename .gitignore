@@ -33,3 +33,14 @@ flutter_application_1/flutter_01.log
 # Training history written by the app
 training_stats.json
 training_stats.json.tmp
+
+# PyInstaller output (build_exe.py)
+build/
+dist/
+
+# This machine's settings (optional light, Tesseract path), read by app.py
+finishit.json
+
+# Local material that is not part of the app
+pitch materials video/
+*.m4a

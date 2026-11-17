@@ -42,6 +42,20 @@
     .d.dbl { background: #14532d33; }
 
     p.hint { font-size: 0.66rem; color: #555; margin: 10px 0 0; line-height: 1.4; }
+
+    .btns { display: flex; gap: 6px; margin-top: 8px; }
+    .btns button {
+      font: inherit; font-size: 0.8rem; font-weight: bold; cursor: pointer;
+      padding: 8px 10px; border-radius: 6px;
+      background: #1f2937; color: #e5e7eb; border: 1px solid #374151;
+    }
+    .btns button.go { flex: 1; background: #3dbfa3; border-color: #3dbfa3; color: #0b0f14; }
+    .btns button:disabled { opacity: .4; cursor: default; }
+    .btns button[hidden] { display: none; }
+    .sel {
+      font-size: 0.66rem; color: #555; margin-top: 4px;
+      word-break: break-all; line-height: 1.35;
+    }
   </style>
 </head>
 <body>
@@ -50,6 +64,16 @@
   <div class="row"><span class="k">app</span><span class="v" id="app">…</span></div>
   <div class="row"><span class="k">source</span><span class="v" id="src">…</span></div>
   <div class="row"><span class="k">field</span><span class="v" id="field">…</span></div>
+
+  <hr/>
+
+  <div class="row"><span class="k">site</span><span class="v" id="site">…</span></div>
+  <div class="row"><span class="k">score element</span><span class="v" id="pickState">…</span></div>
+  <div class="sel" id="selectors"></div>
+  <div class="btns">
+    <button class="go" id="pick">Select score element</button>
+    <button id="forget" hidden>Reset</button>
+  </div>
 
   <hr/>
 

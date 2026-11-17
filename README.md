@@ -1,361 +1,177 @@
-<img src="static/icon-192.png" width="96" alt="Finish IT icon" align="right">
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.svg">
+    <img src="docs/banner-light.svg" width="100%" alt="Finish IT: darts checkout calculator and live finish companion">
+  </picture>
+</p>
 
-# Finish IT — Dart Outshot Calculator
+<p align="center">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Flask 3" src="https://img.shields.io/badge/Flask-3-000000?logo=flask&logoColor=white">
+  <img alt="OpenCV" src="https://img.shields.io/badge/OpenCV-4-5C3EE8?logo=opencv&logoColor=white">
+  <img alt="Edge extension, Manifest V3" src="https://img.shields.io/badge/Edge%20extension-MV3-0078D7?logo=microsoftedge&logoColor=white">
+  <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-0078D4">
+  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-19D17F">
+</p>
 
-Type a score and get the best way to finish it. Or let the app follow a live game: it reads your remaining score as you throw, shows the
-checkout.
+<p align="center">
+  <b>Type the score you have left and see how to finish it. Or let a small Edge extension follow the game in your browser and show the finish while you throw.</b><br>
+  A Flask app on your own PC: no account, no cloud, and the extension runs only on the app and on the scoreboard sites you point it at.
+</p>
 
----
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#configuration">Configuration</a> ·
+  <a href="docs/how-it-works.md">Full documentation</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/calculator-dark.png">
+    <img src="docs/calculator-light.png" width="28%" alt="The calculator at 81: best finish T19 then D12, four alternatives, a link to all 14 ways">
+  </picture>
+  &nbsp;
+  <img src="docs/live.png" width="68%" alt="The live page at 81 while the extension follows a game: best finish T19 then D12, more ways below">
+  <br>
+  <sub>Left: the calculator at 81, sized for a phone, light or dark with your system. Right: the live page while the extension follows a game; it shows the same finish for whoever is at the throw.</sub>
+</p>
 
 ## Features
 
-- **Calculator** (`/`) — type a score, get the best finish and the alternatives. Phone-first, light and dark, installable to a home screen
-- **Live follower** (`/live`) — follows the board and shows the finish for the current score, with the reader diagnostics one tap away
-- **Outshot logic** — every valid 1-, 2- and 3-dart finish for 2–170, with curated preferred paths
-- **All finishes table** — browse every checkout from 2 to 170 at `/finishes`
-- **Live score reading** — the app reads the remaining score off the screen by template matching, with Tesseract as a fallback
-- **LED status ring** — a WLED ring shows how far you are from a finish: red at 170 through to green near the double, blue when there is no checkout, a pulse when a leg is won
-- **Training modes** — three drills at `/training`, scored straight off the board, with the history kept so you can see progress
+- **Calculator**: type any score from 2 to 170 and get the best route plus the alternatives. Every 1-, 2- and 3-dart finish that ends on a double is computed, and a hand-curated table puts the common routes first. Sized for a phone, light and dark, installable as an app.
+- **Live finish**: the Edge extension reads the remaining score straight out of the scoreboard page you play on and sends it to the app, so the numbers are exact and need no OCR. The live page, a small overlay on the game page and the extension's popup all show the finish for the current score.
+- **No site built in**: you show the extension the score once per site (**Select score element**, then a click on the number). It remembers the element and asks for access to that one site only.
+- **Screen reading as a fallback**: without the extension, the app reads the score from a fixed region of the screen by template matching, with [Tesseract](https://github.com/tesseract-ocr/tesseract) as an optional second try.
+- **Training drills**: 301 darts, 10 × 101 and Random 20, scored from the live feed while you throw. The history stays in a local file, with a progress chart and personal bests. Random 20 draws its numbers from professional match data.
+- **All finishes, on screen and on paper**: `/finishes` lists every checkout from 2 to 170; [`checkouts_61-180.pdf`](checkouts_61-180.pdf) is a print-out of the preferred routes from 61 up, with the scores that have no checkout.
+- **One file to hand out**: `python build_exe.py` builds `FinishIT.exe`. Double-click it and the live page opens.
 
----
+## How it works
 
-## The pages
-
-| Page | What it is for |
-|------|----------------|
-| `/` | **The calculator.** Score box, Calculate, the best finish, the alternatives as chips. Nothing on it touches the reader or the LEDs. Opens at a score with `/?score=121`. |
-| `/live` | **The board follower.** One big score, the best finish as three dart tiles, more ways in folds. Live mode follows the board; Type mode takes a score by hand. |
-| `/finishes` | The full checkout table, 2–170. |
-| `/training` | The three training drills and the progress history. |
-
-On a desktop browser the calculator draws a phone body around itself; on a real phone that frame
-drops away and the page fills the screen.
-
-**The look.** Ink on chalk, one typeface (Space Grotesk), and one rule: green is reserved for the
-finish. The double that ends a route is the only green thing on screen, so the answer is always
-where the eye lands. The icon is a calculator with a dart through it, with the dart as its one
-green element. `static/icon.svg` is the master; the PNG sizes next to it are exported from it.
-
----
-
-## Project Structure
-
-```
-├── app.py                  # Flask app — score reader, outshot logic, LED ring, API routes
-├── capture_templates.py    # Manual template capture tool (live preview + keyboard controls)
-├── auto_capture.py         # Automated template capture (0–501) via pyautogui
-├── train.py                # CNN trainer for score classification (PyTorch)
-├── test_ocr.py             # CLI tool to test OCR on a saved image file
-├── test_led.py             # Walks the LED ring through idle and the full score gradient
-├── test_training.js        # Runs the training-drill logic under node (no browser)
-├── show_region.py          # Debug tool — screenshots the current OCR region
-├── static/
-│   ├── icon.svg            # App icon master (calculator with a dart)
-│   ├── icon-*.png          # Exported sizes: 1024, 512, 192, 180
-│   └── manifest.webmanifest
-├── templates/
-│   ├── index.html          # The calculator (phone-frame design)
-│   ├── live.html           # Board follower: live score + reader diagnostics
-│   ├── finishes.html       # All finishes table (2–170)
-│   └── training.html       # The three training drills + progress history
-└── templates_capture/
-    └── field2/             # Captured template images (one PNG per score 0–501)
-        └── gray/           # Preprocessed grayscale versions
+```mermaid
+flowchart TD
+  G["Scoreboard page in Edge"] -- "extension reads the element you picked<br/>POST /api/score" --> R
+  S["Screen region"] -. "fallback after 5 s without a push:<br/>template match, then Tesseract" .-> R
+  R["Score reader<br/>app.py"] --> M["Checkout maths<br/>calculate_output, suggested_ways"]
+  Y["You type a score"] --> M
+  M --> L["Live page"]
+  M --> O["Overlay on the game page<br/>and extension popup"]
+  M --> C["Calculator"]
+  R --> T["Throw feed<br/>/api/throws"] --> D["Training drills"]
 ```
 
----
+The app has three parts. The **reader** takes the score the extension pushes; when no push has arrived for five seconds it falls back to the screen. The **checkout maths** builds every legal finish for a score and orders it by the preferred-route table. The **throw feed** turns each drop in the remaining score into a numbered event, so the training page can poll it and never miss a throw. Everything runs on `127.0.0.1:5000`.
 
-## Requirements
+The reader pipeline, the outshot logic, the drills and the API are described in **[docs/how-it-works.md](docs/how-it-works.md)**.
 
-```
-flask
-numpy
-opencv-python
-mss
-pytesseract
-pyautogui        # for auto_capture.py only
-pyperclip        # for auto_capture.py only
-torch            # for train.py only
-torchvision      # for train.py only
-pillow           # for train.py only
-```
+## Quick start
 
-Install everything:
+You need Windows 10 or 11, Python 3.10 or later, and Microsoft Edge for the extension. The calculator alone runs anywhere Flask runs.
 
-```bash
-pip install flask numpy opencv-python mss pytesseract pyautogui pyperclip torch torchvision pillow
+```powershell
+git clone https://github.com/sguhring/-finish-it.git finish-it
+cd finish-it
+python -m venv venv
+venv\Scripts\python -m pip install -r requirements.txt
+venv\Scripts\python app.py
 ```
 
-Tesseract OCR must also be installed separately:
-- **Windows**: [https://github.com/UB-Mannheim/tesseract/wiki](https://github.com/UB-Mannheim/tesseract/wiki) — default path `C:\Program Files\Tesseract-OCR\tesseract.exe`
-- **macOS**: `brew install tesseract`
-- **Linux**: `sudo apt install tesseract-ocr`
+Open <http://127.0.0.1:5000> for the calculator and <http://127.0.0.1:5000/live> for the live page.
 
----
+**The extension** (for following a game): open `edge://extensions`, switch on **Developer mode**, choose **Load unpacked** and pick the `edge-extension` folder. Then pin **Finish IT bridge** to the toolbar.
 
-## Getting Started
+**Tesseract** is optional. Install it from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) if you want the second OCR try; the app finds it in `C:\Program Files\Tesseract-OCR` or on your `PATH`.
 
-### 1. Run the app
+**The exe**: `python build_exe.py` writes `dist\FinishIT.exe`, a single file with the pages and reference images inside. The extension is installed in Edge separately.
 
-```bash
-python app.py
-```
+## Usage
 
-Open [http://localhost:5000](http://localhost:5000) for the calculator. That is all the
-calculator needs — the remaining steps are only for following a live game.
+### The calculator
 
-### 2. Calibrate the OCR region
+Type a score and press **Calculate**. The best finish is on top with its double in green; the alternatives follow as chips, and **Show all ways** lists every route. `/?score=121` opens the page at a score.
 
-The OCR region is defined in `app.py`:
+### Following a game
 
-```python
-OCR_FIELDS = {
-    1: {"top": 420, "left": 120, "width": 430, "height": 220},
-    2: {"top": 420, "left": 680, "width": 490, "height": 220},
-}
-```
+1. Start the app and open your scoreboard page in Edge.
+2. Click the extension icon and press **Select score element**. Click player 1's score, then player 2's, or press **Enter** (or **Only one score**) when the page shows a single number. **Esc** cancels.
+3. Allow the extension on that site when Edge asks. It then comes back on every visit without another pick.
 
-Adjust `top`, `left`, `width`, and `height` to frame the score display on your screen. Use the debug tool to verify:
+From then on the remaining score reaches the app on every change. The popup shows where the score comes from (**extension** or **screen ocr**), what the pick reads, and a **Reset** that forgets the site. If the site changes its layout, the popup says **lost - select it again**.
 
-```bash
-python show_region.py
-```
+On `/live`, **Live** follows the game and **Type** takes a score by hand; **P1** and **P2** choose whose score to show. The overlay on the game page has the same switch plus **AUTO**, which follows whoever is at the throw, and it can be folded, moved and resized.
 
-This saves `ocr_region_current.png` so you can check what is being captured.
+### Training
 
-### 3. Capture templates (recommended)
+Open `/training`. The drills read the score from the live feed, so there is nothing to type while you throw.
 
-Template matching is significantly faster and more accurate than Tesseract. Capture one image per score (0–501) from your actual scoreboard display.
+<p align="center">
+  <img src="docs/training.png" width="88%" alt="The training page: 301 darts drill selected, with a hint to start a 9999 game and the block size 100, 301 or 601">
+</p>
 
-**Manual capture** (interactive, recommended for first-time setup):
+| Drill | Start a game at | What it measures |
+|---|---|---|
+| **301 darts** | `9999` | Your 3-dart average over a fixed block of 100, 301 or 601 darts. No finish, no bust. |
+| **10 × 101** | `101` | Darts per leg over ten legs, double out. A leg counts when the score reads 0. |
+| **Random 20** | `9999` | Three different numbers each round, one dart at each; how many you hit, and your weakest numbers. |
 
-```bash
-python capture_templates.py
-```
-
-- A live preview window opens
-- Use your browser to set a score on screen
-- Press `SPACE` to capture and auto-advance
-- Use `LEFT`/`RIGHT` arrows to adjust the current score
-- Type digits + `ENTER` to jump to a specific score
-- Press `Q` to quit
-
-**Automated capture** (faster, requires pyautogui):
-
-```bash
-python auto_capture.py
-```
-
-Follow the on-screen prompts to calibrate the input field position. The script will then type each score (0–501) automatically, wait for the display to update, and screenshot it.
-
-Templates are saved to `templates_capture/field2/<score>.png`. Once at least one template exists, the app will prefer template matching over Tesseract on the next startup.
-
----
-
-## How It Works
-
-### OCR Pipeline
-
-```
-Screen capture (mss)
-       │
-       ├─ Templates loaded? ──Yes──► Template matching (matrix multiply)
-       │                                    │
-       │                              Confidence ≥ 0.56? ──No──► Tesseract fallback
-       │
-       └─ No templates ──────────────► Tesseract fallback
-```
-
-**Template matching** preprocesses each frame (grayscale → sharpen → OTSU threshold), crops to the digit bounding box (top 70% of the region), resizes to a 256×96 fingerprint, and computes normalised cross-correlation against all stored templates in a single matrix multiply.
-
-**Tesseract fallback** applies multiple threshold strategies (binary, binary-inv, OTSU) and PSM modes (7 and 8), then picks the highest-confidence result that falls within the valid score range (0–501).
-
-A **debounce** of 2 consecutive matching reads is required before the score is accepted, filtering out transient OCR glitches.
-
-### Outshot Logic
-
-`calculate_output(V)` builds all valid dart combinations (singles, doubles, triples, bull) that sum to score `V` and end on a double. It returns notation strings like `T20`, `S5`, `D20`, `Bull`, `SBull`.
-
-`suggested_ways(V)` reorders those combinations using a hand-curated lookup table (`_SUGGESTED_ROWS`) that prioritises common, high-percentage finishing paths (e.g. preferring D20 and D16 as finishing doubles).
-
-Helper functions cover specific checkout patterns:
-- `na_double_double_finishes` — two-dart finishes (scores 62–80)
-- `single_double_double_finishes` — S+D+D patterns (scores 97, 102–120)
-
----
-
-## API Endpoints
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| `GET` | `/` | The calculator: type a score, get the best finish and alternatives |
-| `POST` | `/` | Submit a score manually, returns rendered outshots |
-| `GET` | `/live` | Board follower: live score, best finish, reader diagnostics |
-| `GET` | `/api/ways/<score>` | Every checkout list for one score (JSON) |
-| `GET` | `/finishes` | Full finishes table (2–170) |
-| `GET` | `/api/outshot` | Current OCR score + suggested outshots (JSON) |
-| `POST` | `/api/set_field` | Switch OCR region (`{"field": 1}` or `{"field": 2}`) |
-| `GET` | `/api/current_field` | Returns active OCR field number |
-| `POST` | `/api/score` | Push an exact score to the app instead of reading the screen |
-| `POST` | `/api/leg_end` | Fired when a score reaches 0 — pulses the LED ring |
-| `GET` | `/api/region_preview` | Live PNG of the current capture rectangle |
-| `GET` | `/training` | The training drills |
-| `GET` | `/api/throws` | Score-change feed (`?since=<id>`) behind the drills |
-| `GET`/`POST` | `/api/training/sessions` | List or save a finished training session |
-| `DELETE` | `/api/training/sessions/<id>` | Delete a saved session |
-
-### `/api/outshot` response example
-
-```json
-{
-  "ok": true,
-  "score": 99,
-  "message": "Good Luck",
-  "suggested_ways": [["T19", "S2", "D20"], ["T19", "S10", "D16"]],
-  "na_double_double_finishes": [],
-  "single_double_double_finishes": [],
-  "raw": "99",
-  "updated_ts": 1712345678.123,
-  "source": "ocr",
-  "field": 2
-}
-```
-
----
-
-## LED ring
-
-The app mirrors the checkout situation on a [WLED](https://kno.wled.ge/) ring around the board.
-It is optional: set `WLED_ENABLED = False` in `app.py` to switch it off.
-
-The light is two rings on one output, and they do different jobs:
-
-| Ring | Shows |
-|------|-------|
-| **Outer** | The status. A gradient from red at 170 to green at 2, blue when the score has no checkout, a rainbow when no game is running, and a bright pulse when a leg is won. |
-| **Inner** | A steady, dim light red in every state. It sits right at the board, so it stays out of the status display. |
-
-The ring only updates when the score changes, and the request runs on its own thread, so an
-unreachable ring never slows the score reader down.
-
-**If the ring ignores the app** and just plays its rainbow, the app is not reaching it. The ESP
-has a boot preset of its own, and its address changes with the network. Compare your PC's
-address with `WLED_HOST` in `app.py` first.
-
-```bash
-python test_led.py   # walks the ring through idle and the whole gradient; run with the app stopped
-```
-
----
-
-## Training modes
-
-Open `/training`. All three read the score straight off the board — there is
-nothing to type in while you throw.
-
-| Drill | Set the board to | What is measured |
-|-------|------------------|------------------|
-| **301 darts** | `9999` | A fixed block of darts (100 / 301 / 601) — what you average over it. No finish, no bust. |
-| **10 × 101** | `101` | Darts per leg over ten real legs, double out. A leg is counted when the board reads 0. |
-| **Random 20** | `9999` | A random three-number sequence each round, one dart at each; how much of it you actually hit. |
-
-The 9999 board is the trick that makes the first and third work: the leg never
-ends, so the board becomes a pure scoring surface and every visit shows up as a
-drop in the remaining score. `/api/throws` turns those drops back into throws.
-
-Every visit counts as three darts, whatever the board reports — a dart that
-scores nothing does not move the remaining score, so counting only what arrived
-would quietly drop it and flatter your average. A whole visit that scores
-nothing is still invisible, so each drill has a **Nothing scored** button for
-it. The block is set in darts but thrown in threes, so the last visit usually
-carries you a dart or two past 301; the average is taken over the darts you
-actually threw.
-
-**Random 20 is a sequence, not a number.** Each round draws three different
-numbers and you throw one dart at each, in the order shown — switching bed every
-dart, the way a real visit does, rather than repeating the same number three
-times.
-
-**Its draw comes from real match data.** `PRO_ATTEMPTS` in
-`templates/training.html` is how many darts the top 16 professionals *aimed* at
-each number over the 2019 season (trebles plus doubles at that number), from the
-dataset behind Haugh & Wang, *An Empirical Bayes Approach for Estimating Skill
-Models for Professional Darts Players*
-([arXiv:2302.10750](https://arxiv.org/abs/2302.10750), data at
-[wangchunsem/OptimalDarts](https://github.com/wangchunsem/OptimalDarts)). Raw,
-20 takes **71%** of every dart a professional aims, 19 another 16%, and 13 turns
-up once in three thousand — honest, but a poor practice hour. So:
-
-| Draw | What it does |
-|------|--------------|
-| **Practice** (default) | Those counts square-rooted: 20 ≈ 34%, 19 ≈ 16%, 18 ≈ 9%, then 17/16/10/8 off the finishing doubles, down to ≈ 0.7% for 13. Same order as the pros, but the numbers nobody practises still come up. |
-| **Pro** | The counts exactly as measured. Seven rounds in ten are a 20. |
-| **Even** | Every number equally likely. |
-
-Tagging which darts landed (a button under each number, or keys `1`–`3`, `0` for
-none) is optional, but it is what makes the hit rate and the "weakest numbers"
-table work — and it is per dart, because "2 of 3" cannot say *which* number you
-missed.
-
-Results are appended to `training_stats.json` next to the app — not to browser
-storage — so the history survives a cache clear and reads the same from a phone
-pointed at the app. The **Progress** tab charts each drill's headline number
-over time and flags personal bests.
-
-```bash
-node test_training.js   # exercises the drill logic against templates/training.html
-```
-
----
+A game at 9999 never ends, so every visit shows up as a drop in the remaining score. A visit that scores nothing does not move the score, so each drill has a **Nothing scored** button. Results go to `training_stats.json` next to the app, not to browser storage, so the history survives a cache clear. **Progress** charts each drill over time and marks personal bests.
 
 ## Configuration
 
-Key constants in `app.py`:
+| You want… | Do this |
+|---|---|
+| the calculator at a given score | open `/?score=121` |
+| the extension on another scoreboard site | open the site, click the extension icon, **Select score element** |
+| the extension to forget a site | **Reset** in the popup while you are on that site |
+| the other player's finish | **P1** / **P2** on `/live` or in the overlay; **AUTO** in the overlay follows whoever is at the throw |
+| screen reading on another screen or layout | change `OCR_FIELDS` in `app.py`, then check the frame with `python show_region.py` or the **Reader** fold on `/live` |
+| screen reading for your scoreboard's font | capture your own reference images: `python capture_templates.py` (or `auto_capture.py`) |
+| fewer misses, or fewer false matches | lower `TEMPLATE_CONF_THRESHOLD` in `app.py` (e.g. `0.50`), or raise it (e.g. `0.62`) |
+| Tesseract from another folder | `{"tesseract_cmd": "D:/Tools/Tesseract-OCR/tesseract.exe"}` in `finishit.json` next to `app.py` or the exe |
+| a different Random 20 draw | **Practice** (default), **Pro** or **Even** in the drill |
+| a copy for a friend | `python build_exe.py`, then hand out `dist\FinishIT.exe` and the `edge-extension` folder |
 
-| Constant | Default | Description |
-|----------|---------|-------------|
-| `TEMPLATE_CONF_THRESHOLD` | `0.56` | Minimum correlation score to accept a template match |
-| `TEMPLATE_DEBUG` | `False` | Print match scores to console |
-| `SAVE_OCR_DEBUG` | `False` | Save preprocessed images for Tesseract debugging |
-| `_REQUIRED_CONSECUTIVE` | `2` | Debounce: how many consecutive matching reads required |
-| `poll_s` | `0.35` | OCR polling interval in seconds |
-| `WLED_HOST` | `192.168.237.83` | Address of the LED ring's ESP. Changes with your network |
-| `WLED_ENABLED` | `True` | Set to `False` to run without the ring |
-| `WLED_BRIGHTNESS` | `160` | Outer ring brightness while a score is shown (0–255) |
-| `INNER_COLOUR` | `(255, 80, 70)` | The inner ring's steady light red |
-| `INNER_BRIGHTNESS` | `40` | Inner ring brightness, the same in every state (0–255) |
-| `WLED_INNER_SEGMENTS` | `(0,)` | Empty it to make the inner ring follow the outer one |
+`finishit.json` holds settings for one machine and is gitignored. Without it the app runs on defaults.
 
----
+## Project structure
 
-## Training a CNN (optional)
-
-A PyTorch CNN trainer is included for an alternative classification approach.
-
-```bash
-python train.py
+```text
+app.py                 the Flask app: score reader, checkout maths, throw feed, API
+build_exe.py           builds dist\FinishIT.exe with PyInstaller
+requirements.txt       what the app and the build need
+edge-extension/        the Edge extension: content.js (pick, read, push, overlay), popup, background
+templates/             index.html (calculator), live.html, finishes.html, training.html
+static/                icon master (icon.svg), exported PNG sizes, web manifest
+templates_capture/     reference images for screen reading, one per score 0–501
+capture_templates.py   capture your own reference images (live preview, keyboard controls)
+auto_capture.py        the same, typing each score automatically
+show_region.py         saves a screenshot of the region the reader captures
+test_ocr.py            runs the reader on a saved image
+test_training.js       runs the drill logic under node, no browser
+train.py               experimental CNN trainer, not used by the app
+checkouts_61-180.pdf   the printable checkout sheet (and its .html source)
+docs/                  how-it-works.md, banner and screenshots
 ```
 
-- Reads images from `training_data/` (create with your own augmented captures)
-- Trains a small 3-block CNN on 502 classes (scores 0–501)
-- Saves the best model to `darts_ocr.pth`
+## Known limits
 
-The CNN is not used by `app.py` by default — template matching covers the same use case without a GPU.
+- **Screen reading is tuned to one setup**: `OCR_FIELDS` are pixel positions on one screen, and the reference images come from one scoreboard's font. On anything else, use the extension or capture your own images.
+- **A pick can break**: when a site changes its page structure, the saved element is gone and you pick it again.
+- **Edge only tested**: the extension is Manifest V3 and has only been tried in Microsoft Edge on Windows.
+- **Double out only**: the checkout maths covers double-out finishes from 2 to 170, not straight or master out.
+- **The 9999 drills need the extension**: screen reading only knows scores up to 501, so 301 darts and Random 20 follow the game through the extension; 10 × 101 works either way.
+- **Visits, not darts**: the board reports the remaining score, not single darts, so the drills count a visit as three darts and need **Nothing scored** for a visit that scored zero.
+- **The CNN is an experiment**: `train.py` trains a classifier for the score images, but template matching does the job without a GPU and the app does not use it.
 
----
+## Built with
 
-## Tips
+[Flask](https://flask.palletsprojects.com) · [OpenCV](https://opencv.org) · [NumPy](https://numpy.org) · [python-mss](https://github.com/BoboTiG/python-mss) · [Tesseract](https://github.com/tesseract-ocr/tesseract) via pytesseract · [PyInstaller](https://pyinstaller.org) · Edge extension APIs (Manifest V3) · [Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk)
 
-- **Best accuracy**: capture templates from the exact scoreboard font and layout you use during play. Even small rendering differences can lower correlation scores.
-- **Threshold tuning**: if you see frequent misses, lower `TEMPLATE_CONF_THRESHOLD` slightly (e.g. `0.50`). If you see false matches, raise it (e.g. `0.62`).
-- **Multiple monitors**: `mss` captures from the primary display by default. Adjust `OCR_REGION` coordinates to match your screen layout if the scoreboard is on a secondary monitor.
-- **Browser zoom**: make sure your browser zoom level is consistent between template capture and live use — rescaling changes the digit rendering and breaks template matches.
-
----
-## Todo
-Investigating why CNN improved so little during each epochs and cosums a lot of computing power
-Experiment with different crawler libraries
+Random 20 weights come from the dataset behind Haugh & Wang, *An Empirical Bayes Approach for Estimating Skill Models for Professional Darts Players* ([arXiv:2302.10750](https://arxiv.org/abs/2302.10750), data at [wangchunsem/OptimalDarts](https://github.com/wangchunsem/OptimalDarts)).
 
 ## License
 
-MIT
+[MIT](LICENSE)

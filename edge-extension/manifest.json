@@ -1,19 +1,26 @@
 {
   "manifest_version": 3,
   "name": "Finish IT bridge",
-  "version": "2.0",
-  "description": "Reads the live Scolia scores out of the page and pushes them to the local Finish IT app (no OCR). Also injects OCR-A as a fallback.",
-  "permissions": ["activeTab"],
+  "version": "2.1",
+  "description": "Reads the live darts score out of the page and pushes it to the local Finish IT app (no OCR). Point it at the score once per site.",
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "http://127.0.0.1:5000/*",
     "http://localhost:5000/*"
   ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["http://127.0.0.1:5000/*", "http://localhost:5000/*", "https://game.scoliadarts.com/*"],
+      "matches": ["http://127.0.0.1:5000/*", "http://localhost:5000/*"],
       "js": ["content.js"],
       "run_at": "document_end"
     }

@@ -10,6 +10,10 @@ import time
 
 import app
 
+if not app.WLED_HOST:
+    raise SystemExit('No light configured: put {"wled_enabled": true, "wled_host": "<ip>"} '
+                     "into finishit.json next to app.py.")
+
 SCORES = [None,
           501, 171,
           170, 140, 120, 100, 86, 70, 50, 40, 24, 12, 2,

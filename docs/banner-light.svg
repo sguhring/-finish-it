@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Finish IT: type a score, get the finish">
+<defs><clipPath id="r"><rect width="1024" height="1024" rx="224"/></clipPath><clipPath id="c"><rect x="0" y="0" width="1200" height="300" rx="20"/></clipPath></defs>
+<rect x="0.5" y="0.5" width="1199" height="299" rx="20" fill="#F4F1EA" stroke="rgba(15,23,32,.12)"/>
+<svg x="64" y="70" width="160" height="160" viewBox="0 0 1024 1024"><g clip-path="url(#r)"><rect width="1024" height="1024" fill="#0F1720"/>
+
+  
+  <rect x="322" y="212" width="380" height="600" rx="72" fill="#F4F1EA"/>
+  <rect x="372" y="264" width="280" height="128" rx="32" fill="#0F1720"/>
+  <g fill="#0F1720">
+    <rect x="372" y="446" width="72" height="72" rx="20"/><rect x="476" y="446" width="72" height="72" rx="20"/><rect x="580" y="446" width="72" height="72" rx="20"/>
+    <rect x="372" y="550" width="72" height="72" rx="20"/><rect x="476" y="550" width="72" height="72" rx="20"/><rect x="580" y="550" width="72" height="72" rx="20"/>
+    <rect x="372" y="654" width="72" height="72" rx="20"/><rect x="476" y="654" width="72" height="72" rx="20"/><rect x="580" y="654" width="72" height="72" rx="20"/>
+  </g>
+
+  
+  <g fill="#0F1720" stroke="#0F1720" stroke-linejoin="round" stroke-linecap="round">
+    <line x1="222" y1="802" x2="512" y2="512" stroke-width="88"/>
+    <line x1="512" y1="512" x2="682" y2="342" stroke-width="140"/>
+    <path d="M823 201 L701 347 L677 323 Z" stroke-width="48"/>
+    <path d="M321 703 L222 802 L247 897 L346 798 Z" stroke-width="52"/>
+    <path d="M321 703 L222 802 L127 777 L226 678 Z" stroke-width="52"/>
+  </g>
+
+  
+  <g fill="#19D17F" stroke="#19D17F" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M321 703 L222 802 L127 777 L226 678 Z" stroke-width="16" opacity=".78"/>
+    <path d="M321 703 L222 802 L247 897 L346 798 Z" stroke-width="16"/>
+    <line x1="222" y1="802" x2="512" y2="512" stroke-width="36"/>
+    <line x1="512" y1="512" x2="682" y2="342" stroke-width="88"/>
+    <path d="M823 201 L701 347 L677 323 Z" stroke-width="10"/>
+  </g></g></svg>
+<text x="256" y="138" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#0F1720" letter-spacing="-1">Finish IT</text>
+<text x="258" y="182" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" fill="#5B636B">Darts checkout calculator and live finish companion</text>
+<text x="258" y="220" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#5B636B">type a score · follow your game · train on real throws</text>
+<rect x="806" y="62" width="330" height="176" rx="24" fill="#FFFFFF" stroke="rgba(15,23,32,.12)"/>
+<text x="834" y="108" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#5B636B">Score</text>
+<rect x="896" y="82" width="76" height="40" rx="12" fill="#F8F6F1" stroke="rgba(15,23,32,.12)"/>
+<text x="934" y="110" text-anchor="middle" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F1720">81</text>
+<text x="834" y="158" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#0A7F52">→ Best finish</text>
+<text x="834" y="208" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#0F1720">T19</text>
+<text x="928" y="206" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" fill="#5B636B">→</text>
+<rect x="972" y="170" width="112" height="52" rx="26" fill="#19D17F"/>
+<text x="1028" y="208" text-anchor="middle" font-family="'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="34" font-weight="700" fill="#06281A">D12</text>
+</svg>

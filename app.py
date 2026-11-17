@@ -10,6 +10,9 @@ import queue
 import colorsys
 import urllib.request
 import uuid
+import sys
+import shutil
+import webbrowser
 from collections import deque
 
 import mss
@@ -17,8 +20,41 @@ import cv2
 
 
 
-_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__),
-                               "templates_capture", "field2")
+# -- Where things live -------------------------------------------------------
+# Run as a script, everything sits next to app.py. Run as the PyInstaller exe
+# (build_exe.py), the bundled files -- page templates, static assets, the OCR
+# reference images -- unpack to a throwaway folder (sys._MEIPASS), while what
+# the app writes (training history) and the optional settings file belong next
+# to the exe, where they survive the next launch.
+FROZEN       = getattr(sys, "frozen", False)
+_HERE        = os.path.dirname(os.path.abspath(__file__))
+RESOURCE_DIR = getattr(sys, "_MEIPASS", _HERE)
+DATA_DIR     = os.path.dirname(sys.executable) if FROZEN else _HERE
+
+# Machine-specific settings, all optional, read from finishit.json in DATA_DIR:
+#   wled_enabled / wled_host  -- an optional WLED light; off unless both are set
+#                                here, so no copy ever POSTs to whatever device
+#                                holds some IP on someone else's network
+#   tesseract_cmd             -- path to tesseract.exe for the OCR fallback
+SETTINGS_FILE = os.path.join(DATA_DIR, "finishit.json")
+
+
+def _load_settings() -> dict:
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        print(f"Settings: {SETTINGS_FILE}")
+        return data if isinstance(data, dict) else {}
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        print(f"Settings: could not read {SETTINGS_FILE} ({e}) - using defaults.")
+        return {}
+
+
+SETTINGS = _load_settings()
+
+_TEMPLATES_DIR = os.path.join(RESOURCE_DIR, "templates_capture", "field2")
 _TEMPLATES_LOADED  = False
 _TEMPLATE_MATRIX: np.ndarray | None = None   # (N, H*W) normalised float32
 _TEMPLATE_SCORES:  list[int]        = []     # score label per row
@@ -119,7 +155,9 @@ def _template_read(bgra: np.ndarray) -> tuple[int | None, str]:
         return None, f"template low-conf ({best_val:.3f})"
     return best_score, str(best_score)
 
-app = Flask(__name__)
+app = Flask(__name__,
+            template_folder=os.path.join(RESOURCE_DIR, "templates"),
+            static_folder=os.path.join(RESOURCE_DIR, "static"))
 
 # Cache for the finishes table (2–170) so it is only built once
 _FINISH_TABLE_CACHE: list[dict] | None = None
@@ -142,7 +180,7 @@ lock = threading.Lock()
 # ---------------------------------------------------------------------------
 # Pushed scores (browser extension)
 #
-# The Edge content script reads the scores straight out of the Scolia DOM and
+# The Edge content script reads the scores straight out of the game page and
 # POSTs them to /api/score. Those values are exact by construction, so while a
 # fresh push is available ocr_loop() uses it and skips the screen grab and
 # template match entirely. Screen OCR stays as the fallback for when the
@@ -168,10 +206,10 @@ latest_source = "none"    # "push" | "ocr" | "none"
 # a page just asks for "everything after N" and cannot miss a throw.
 #
 # A drop of 1..180 is a score. Anything else — the score going *up* — is a new
-# leg, a bust that Scolia reverted, or the board being reset, and is emitted as
+# leg, a bust the scoring page reverted, or the board being reset, and is emitted as
 # a "reset" so a mode can react to it instead of counting it as a throw.
 #
-# Note this is per *change*, not per visit: whether Scolia updates the counter
+# Note this is per *change*, not per visit: whether a page updates the counter
 # once per dart or once per visit, this reports what actually changed and the
 # client groups changes into visits by the gap between them.
 # ---------------------------------------------------------------------------
@@ -218,8 +256,9 @@ def _feed_training(field: int, value: int | None, ts: float) -> None:
 # unreachable ESP can never stall the OCR reader.
 # ---------------------------------------------------------------------------
 
-WLED_HOST = "192.168.237.83"
-WLED_ENABLED = True
+# Opt-in only, from finishit.json (gitignored): {"wled_enabled": true, "wled_host": "<ip>"}.
+WLED_HOST = SETTINGS.get("wled_host") or None
+WLED_ENABLED = bool(SETTINGS.get("wled_enabled", False)) and WLED_HOST is not None
 WLED_BRIGHTNESS = 160        # 0-255; WLED still applies its own current limit
 WLED_TIMEOUT_S = 0.6
 
@@ -460,6 +499,23 @@ def _score_ocr_attempt(threshold_name: str, cfg: str, image: np.ndarray) -> dict
     return best_candidate
 
 
+def _find_tesseract() -> str | None:
+    for cand in (SETTINGS.get("tesseract_cmd"),
+                 r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                 shutil.which("tesseract")):
+        if cand and os.path.isfile(cand):
+            return cand
+    return None
+
+
+# Only the screen-OCR fallback needs it, and only when template matching is
+# unsure. Without it that tier is skipped -- the extension's push and the
+# templates still work -- instead of failing three times a second.
+TESSERACT_CMD = _find_tesseract()
+if TESSERACT_CMD is None:
+    print("Tesseract not found - OCR fallback limited to template matching.")
+
+
 def ocr_read_score_region() -> tuple[int | None, str]:
     """Grab the screen region and return (score, raw_text).
 
@@ -479,6 +535,8 @@ def ocr_read_score_region() -> tuple[int | None, str]:
             print("Template match failed — falling back to Tesseract.")
 
         # --- Tesseract fallback ---
+        if TESSERACT_CMD is None:
+            return None, "no tesseract"
         gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
         gray = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_LINEAR)
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)
@@ -496,7 +554,7 @@ def ocr_read_score_region() -> tuple[int | None, str]:
                 cv2.imwrite(f"ocr_debug_{name}.png", th)
 
         import pytesseract
-        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
         best_candidate = None
         cfg7 = "--psm 7 -c tessedit_char_whitelist=0123456789 --oem 1"
@@ -1194,7 +1252,7 @@ def api_current_field():
 
 
 def _cors(resp):
-    """Allow the Scolia page's extension to POST here.
+    """Allow the extension on the game page to POST here.
 
     Chrome also gates public -> private-network requests behind a preflight
     that wants Allow-Private-Network, hence the third header.
@@ -1210,7 +1268,7 @@ def _clean_score(v):
     """Accept only plausible darts scores; anything else is dropped.
 
     The ceiling is MAX_PUSH_SCORE, not 501, because the training modes are
-    thrown on a Scolia board set to 9999: that board never finishes, so it can
+    thrown on a game started at 9999: that board never finishes, so it can
     be used as a pure scoring surface and every visit shows up as a drop in the
     remaining score. A 501 ceiling would silently reject every one of them.
     """
@@ -1317,7 +1375,7 @@ def api_region_preview():
 # new drill needs no schema change here.
 # ---------------------------------------------------------------------------
 
-TRAINING_FILE = os.path.join(os.path.dirname(__file__), "training_stats.json")
+TRAINING_FILE = os.path.join(DATA_DIR, "training_stats.json")
 TRAINING_MODES = ("301", "legs101", "random20")
 TRAINING_MAX_SESSIONS = 2000
 _training_lock = threading.Lock()
@@ -1475,4 +1533,16 @@ def live():
 if __name__ == '__main__':
     threading.Thread(target=ocr_loop, daemon=True).start()
     threading.Thread(target=wled_loop, daemon=True).start()
-    app.run(debug=True)
+    if FROZEN:
+        # No debug reloader in the exe: it re-launches the process, which here
+        # means a second exe with its own reader and LED threads. Port 5000 is
+        # what the extension talks to; FINISHIT_PORT / FINISHIT_NO_BROWSER only
+        # exist to smoke-test a build next to a running copy.
+        port = int(os.environ.get("FINISHIT_PORT", 5000))
+        url = f"http://127.0.0.1:{port}/live"
+        print(f"\nFinish IT is running at {url}\nClose this window to stop it.\n")
+        if not os.environ.get("FINISHIT_NO_BROWSER"):
+            threading.Timer(1.5, webbrowser.open, args=(url,)).start()
+        app.run(host="127.0.0.1", port=port, debug=False)
+    else:
+        app.run(debug=True)

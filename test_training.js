@@ -263,7 +263,7 @@ A.mlegs.onReset({ kind: "reset", before: 0, after: 101 });
 eq("armed for leg 2", A.mlegs.awaitingReset, false);
 
 A.feedChange(ev(60, 41));
-A.mlegs.onReset({ kind: "reset", before: 41, after: 101 });   // Scolia reverts a bust
+A.mlegs.onReset({ kind: "reset", before: 41, after: 101 });   // the page reverts a bust
 eq("bust counted, not treated as a new leg", A.mlegs.busts, 1);
 eq("still on leg 2", A.mlegs.legs.length, 1);
 A.feedChange(ev(101, 0));
