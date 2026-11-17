@@ -1,0 +1,14 @@
+# The app (python app.py)
+flask>=3.0
+numpy
+opencv-python
+mss
+pytesseract        # optional OCR fallback; also needs the Tesseract program itself
+
+# Building FinishIT.exe (python build_exe.py)
+pillow
+pyinstaller
+
+# Only for the capture and CNN scripts, not needed to run the app:
+# pyautogui pyperclip   -> auto_capture.py
+# torch torchvision     -> train.py
