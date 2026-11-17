@@ -44,3 +44,9 @@ finishit.json
 # Local material that is not part of the app
 pitch materials video/
 *.m4a
+
+# Kept on this machine, not in the repo: CNN training images and model,
+# and the Flutter mock-up of the calculator
+training_data/
+darts_ocr.pth
+flutter_application_1/

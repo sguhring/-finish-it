@@ -27,6 +27,8 @@ The reader keeps one score per player field (1 and 2). `current_field` decides w
 
 A Manifest V3 extension in `edge-extension/`. It names no scoring service and does nothing on a page until you have picked the score there.
 
+> **Terms of use.** Reading a scoreboard page with an extension is scraping in the sense of many terms of use, and some online scoreboards and autoscoring systems forbid it. Check the terms of the site or system before you pick a score there, and use the extension only where they allow it or the provider agrees. The extension sends the score only to the app on `127.0.0.1`.
+
 **The picker.** **Select score element** in the popup injects `content.js` and `pick.js` into the current tab (the `activeTab` permission allows that without a prompt). You click player 1's score, then player 2's, or press Enter when the page shows one number. Each click becomes a CSS selector that avoids the number itself and auto-generated class names; hashed CSS-module classes are cut down to a prefix match, because the hash changes with every build of a site. The selectors are stored per host in `chrome.storage.sync` under `finishit.sites`.
 
 **Coming back.** The same click asks for an optional host permission for that site. `background.js` registers `content.js` on every granted host, so the pick works on the next visit without the popup. **Reset** in the popup removes the selectors and the permission.
@@ -184,4 +186,4 @@ The live and training pages still use their own darker style (Poppins and Oswald
 
 ## The CNN experiment
 
-`train.py` trains a small three-block CNN on 502 classes (scores 0 to 501) from images in `training_data/` and saves the best model to `darts_ocr.pth`. The app does not load it: template matching reads the same numbers without a GPU. Training improved little per epoch and cost a lot of compute, which is why it stayed an experiment.
+`train.py` trains a small three-block CNN on 502 classes (scores 0 to 501) from images in `training_data/` and saves the best model to `darts_ocr.pth`. Both stay on your machine; the repo does not include them. The app does not load it: template matching reads the same numbers without a GPU. Training improved little per epoch and cost a lot of compute, which is why it stayed an experiment.

@@ -43,7 +43,7 @@
 
 - **Calculator**: type any score from 2 to 170 and get the best route plus the alternatives. Every 1-, 2- and 3-dart finish that ends on a double is computed, and a hand-curated table puts the common routes first. Sized for a phone, light and dark, installable as an app.
 - **Live finish**: the Edge extension reads the remaining score straight out of the scoreboard page you play on and sends it to the app, so the numbers are exact and need no OCR. The live page, a small overlay on the game page and the extension's popup all show the finish for the current score.
-- **No site built in**: you show the extension the score once per site (**Select score element**, then a click on the number). It remembers the element and asks for access to that one site only.
+- **No site built in**: you show the extension the score once per site (**Select score element**, then a click on the number). It remembers the element and asks for access to that one site only. Use it only where the site's terms allow reading the page (see [Following a game](#following-a-game)).
 - **Screen reading as a fallback**: without the extension, the app reads the score from a fixed region of the screen by template matching, with [Tesseract](https://github.com/tesseract-ocr/tesseract) as an optional second try.
 - **Training drills**: 301 darts, 10 × 101 and Random 20, scored from the live feed while you throw. The history stays in a local file, with a progress chart and personal bests. Random 20 draws its numbers from professional match data.
 - **All finishes, on screen and on paper**: `/finishes` lists every checkout from 2 to 170; [`checkouts_61-180.pdf`](checkouts_61-180.pdf) is a print-out of the preferred routes from 61 up, with the scores that have no checkout.
@@ -94,6 +94,9 @@ Open <http://127.0.0.1:5000> for the calculator and <http://127.0.0.1:5000/live>
 Type a score and press **Calculate**. The best finish is on top with its double in green; the alternatives follow as chips, and **Show all ways** lists every route. `/?score=121` opens the page at a score.
 
 ### Following a game
+
+> [!IMPORTANT]
+> **Check the site's terms first.** The extension reads the score out of the scoreboard page in your own browser, and many online scoreboards and autoscoring systems forbid scraping or automated reading of their pages in their terms of use. Use it only on sites whose terms allow it, or with the provider's permission. It sends the score only to the app on your PC.
 
 1. Start the app and open your scoreboard page in Edge.
 2. Click the extension icon and press **Select score element**. Click player 1's score, then player 2's, or press **Enter** (or **Only one score**) when the page shows a single number. **Esc** cancels.
@@ -160,6 +163,7 @@ docs/                  how-it-works.md, banner and screenshots
 
 - **Screen reading is tuned to one setup**: `OCR_FIELDS` are pixel positions on one screen, and the reference images come from one scoreboard's font. On anything else, use the extension or capture your own images.
 - **A pick can break**: when a site changes its page structure, the saved element is gone and you pick it again.
+- **Site terms are your call**: the extension cannot know whether a scoreboard or autoscoring system allows its page to be read. Check the terms of use before you pick a score there.
 - **Edge only tested**: the extension is Manifest V3 and has only been tried in Microsoft Edge on Windows.
 - **Double out only**: the checkout maths covers double-out finishes from 2 to 170, not straight or master out.
 - **The 9999 drills need the extension**: screen reading only knows scores up to 501, so 301 darts and Random 20 follow the game through the extension; 10 × 101 works either way.

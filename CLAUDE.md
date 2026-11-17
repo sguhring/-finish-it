@@ -11,8 +11,8 @@ alongside a browser-based darts scoring page: a browser extension reads the scor
 finish suggestions.
 
 Everything of substance lives in `app.py`. The other top-level `.py` files are tooling and
-one-off scripts. The `flutter/`, `flutter_application_1/`, and `venv/` directories are
-unrelated/local checkouts (mostly gitignored) — ignore them.
+one-off scripts. The `flutter/`, `flutter_application_1/`, `training_data/` and `venv/`
+directories and `darts_ocr.pth` are local only (gitignored, not in the repo) — ignore them.
 
 ## Commands
 
@@ -94,7 +94,7 @@ The capture scripts keep their **own copies** of these coordinates that must be 
 `capture_templates.py` left=700), so verify before relying on them.
 
 > The CNN (`train.py` / `ScoreCNN` / `darts_ocr.pth`) and the per-dart reader (`ocr_throws.py`) are
-> **not imported or used by `app.py`**. The committed `darts_ocr.pth` is currently orphaned. If you
+> **not imported or used by `app.py`**. The local `darts_ocr.pth` (gitignored) is currently orphaned. If you
 > wire the CNN in, it would replace/augment the template-matching tier.
 
 ### 2. Darts checkout math (pure functions, no OCR dependency)
@@ -374,6 +374,8 @@ its score element (job 5). Then it does four jobs there:
 
 > Keep scoring services out of this repo: no site names, hostnames, logos or per-site presets in
 > code, docs or assets. Site specifics belong in the user's own picks (browser storage), not here.
+> README and docs/how-it-works.md tell users to check a site's terms of use (scraping) before they
+> pick a score there; keep that note when either file is rewritten.
 
 Both score filters accept **four** digits, not three, so a board set to 9999 for the
 training drills is read rather than ignored.
