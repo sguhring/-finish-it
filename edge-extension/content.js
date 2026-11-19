@@ -28,7 +28,7 @@
   // Bump on every change, so the console tells you which build a tab is really
   // running. Reloading the extension does NOT swap the script in tabs that are
   // already open - those keep the old copy alive until the page is reloaded.
-  const VERSION       = "v6 (picker only, no built-in site)";
+  const VERSION       = "v7 (overlay asks the app through the service worker)";
 
   const APP           = "http://127.0.0.1:5000";
   const POLL_MS       = 250;    // how often we re-read the DOM
@@ -289,13 +289,19 @@
   let currentField    = null;   // what the app last reported
   let lastSyncedField = null;   // avoids re-POSTing set_field every tick
 
+  // The overlay's two calls (/api/outshot, /api/set_field) go through the
+  // service worker, not out of this script. A fetch from here counts as the
+  // page's own, so the page's CORS rules apply to it, and the app does not
+  // open those two routes to web pages. background.js makes the call and
+  // replies. async, so the throw of an extension reloaded underneath us
+  // ("Extension context invalidated") arrives as a rejection like any other.
+  const askApp = async msg => chrome.runtime.sendMessage(msg);
+
   function setField(f) {
     lastSyncedField = f;
-    return fetch(APP + "/api/set_field", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field: f }),
-    }).catch(() => { lastSyncedField = null; });
+    return askApp({ cmd: "set_field", field: f })
+      .then(ok => { if (!ok) lastSyncedField = null; },
+            ()  => { lastSyncedField = null; });
   }
 
   function paintFields() {
@@ -558,8 +564,23 @@
       return;
     }
     try {
-      render(await fetch(APP + "/api/outshot").then(r => r.json()));
-    } catch (e) { /* app down - keep the last frame on screen */ }
+      const d = await askApp({ cmd: "outshot" });
+      if (d) render(d);     // null: app down - keep the last frame on screen
+    } catch (e) {
+      // The worker cannot be reached. If that is because the extension was
+      // reloaded or updated under this tab, it never will be again from this
+      // copy of the script: say so, rather than leave a finish on screen
+      // that no longer follows the board.
+      if (orphaned()) {
+        clearInterval(finishTimer);
+        if (ui) render({ ok: false, score: null, field: currentField,
+                         message: "extension reloaded - reload this page" });
+      }
+    }
+  }
+
+  function orphaned() {
+    try { return !chrome.runtime.id; } catch (e) { return true; }
   }
 
   // -- Push loop -------------------------------------------------------------
@@ -925,6 +946,6 @@
   loadPicked();
 
   setInterval(tick, POLL_MS);
-  setInterval(refreshFinishes, FINISH_MS);
+  const finishTimer = setInterval(refreshFinishes, FINISH_MS);
   refreshFinishes();
 })();

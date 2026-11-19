@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Finish IT bridge",
-  "version": "2.1",
+  "version": "2.2",
   "description": "Reads the live darts score out of the page and pushes it to the local Finish IT app (no OCR). Point it at the score once per site.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [

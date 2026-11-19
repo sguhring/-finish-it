@@ -43,7 +43,7 @@ A Manifest V3 extension in `edge-extension/`. It names no scoring service and do
 
 The popup shows whether the app is reachable, where the score comes from, what the pick reads, and **lost** when the picked element has been missing for three seconds.
 
-`host_permissions` for `127.0.0.1:5000` is what lets the content script reach the app from inside a scoreboard page.
+`host_permissions` for `127.0.0.1:5000` let the extension's own parts, the popup and the service worker (`background.js`), call the app. They do not cover the content script: the browser treats a request made from inside a scoreboard page as that page's request. The overlay therefore asks the service worker for `/api/outshot` and `/api/set_field`, and the app sends no CORS headers on those two routes, so a web page cannot read the score from them. Only the score push and the leg-end signal go out from the page itself.
 
 ## Screen reading
 
@@ -119,7 +119,7 @@ node test_training.js   # runs the drill logic from training.html under node, no
 
 ## API
 
-All routes are served on `127.0.0.1:5000`. `/api/score` and `/api/leg_end` answer CORS requests, because the extension calls them from inside a scoreboard page.
+All routes are served on `127.0.0.1:5000`. `/api/score` and `/api/leg_end` answer CORS requests, because the extension calls them from inside a scoreboard page. No other route does, so a web page cannot read the score.
 
 | Method | Route | What it does |
 |---|---|---|

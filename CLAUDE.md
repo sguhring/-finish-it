@@ -306,6 +306,10 @@ needs no schema change in `app.py`. Deliberately server-side rather than
 - `GET /api/outshot` → JSON of the latest OCR score + its checkout suggestions. `/live` polls
   this in Live mode; the extension overlay and popup poll it too.
 - `POST /api/set_field` / `GET /api/current_field` → switch/read which player field is being OCR'd.
+  Neither this nor `/api/outshot` sends CORS headers, so no web page can read them or send the
+  JSON POST that picks a field; the extension reaches both through its service worker. One gap
+  is left: `api_set_field` treats a body that is not JSON as field 1, so a preflight-free
+  `text/plain` POST from any page still forces field 1 (it cannot pick 2 or read anything).
 - `GET /api/region_preview` → live PNG of the current capture rectangle, so you can visually confirm
   the OCR region is aimed correctly in the browser.
 - `POST /api/score` → accepts exact scores pushed by the extension, as `{"field1": N, "field2": N}`
@@ -341,6 +345,8 @@ its score element (job 5). Then it does four jobs there:
 2. **The on-page overlay**: a draggable panel in a shadow root (so it can never match its own
    score heuristic) that polls `/api/outshot` every 600 ms and draws the checkout suggestions
    onto the game page — no second window needed. Its P1/P2/AUTO buttons drive `/api/set_field`.
+   Both calls are made by the service worker on the overlay's behalf (see "How the extension
+   reaches the app" below).
    In **AUTO** (the default) with a one-score pick it stops caring which button is pressed and
    follows whichever player the page is showing, identified by the largest name-like text; names
    are mapped to fields in the order first seen and remembered in `localStorage`. Pinning P1 or
@@ -383,5 +389,28 @@ training drills is read rather than ignored.
 `popup.html` / `popup.js` show the same live status (app reachable, source, field, score, ways)
 from the extension's own origin.
 
-Requires `host_permissions` for `127.0.0.1:5000` — that is what lets the content script's `fetch`
-bypass the page's CSP and CORS.
+**How the extension reaches the app.** `host_permissions` for `127.0.0.1:5000` cover the
+extension's *own* contexts — the popup and the service worker (`background.js`) — and nothing
+else. A content script's `fetch` counts as the page's: the page's CORS rules apply to it whatever
+the manifest says (the page's CSP does not bind it, but that is the isolated world, not the
+permission). So there are two transports, on purpose:
+
+- `/api/outshot` and `/api/set_field` (the overlay) are fetched **by the service worker**.
+  `content.js` asks for them with `chrome.runtime.sendMessage` (`askApp()`: `{cmd: "outshot"}`,
+  `{cmd: "set_field", field}`) and `background.js` replies with the JSON, or `null` / `false`
+  when the app is down. The worker answers exactly these two commands; it is not a general proxy.
+  The app sends **no CORS headers on these two routes, deliberately**: with them, any page the
+  user visits could read the score and switch the field. Do not "fix" a CORS error on them by
+  adding `_cors()`.
+- `/api/score` and `/api/leg_end` are still fetched straight from `content.js`, which only works
+  because `app.py` answers them with `_cors()` (`Access-Control-Allow-Origin: *`).
+
+The direct pair also depends on the browser's local-network permission: from an https page on a
+public address, Chromium 153 blocked them ("Permission was denied for this request to access the
+`loopback` address space") until the *site* held that permission, which the browser asks the user
+for. The worker's calls needed nothing. Moving the remaining pair into the worker the same way
+would make that prompt, and `_cors()` itself, unnecessary.
+
+A copy of `content.js` left in a tab after the extension is reloaded can no longer reach the
+worker; its overlay says "extension reloaded - reload this page" and stops polling instead of
+showing a finish that no longer follows the board.
