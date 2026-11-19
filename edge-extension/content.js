@@ -28,7 +28,7 @@
   // Bump on every change, so the console tells you which build a tab is really
   // running. Reloading the extension does NOT swap the script in tabs that are
   // already open - those keep the old copy alive until the page is reloaded.
-  const VERSION       = "v6 (picker only, no built-in site)";
+  const VERSION       = "v7 (broadcast overlay)";
 
   const APP           = "http://127.0.0.1:5000";
   const POLL_MS       = 250;    // how often we re-read the DOM
@@ -264,6 +264,12 @@
   // Everything inside scales off one --s factor derived from the panel width,
   // so dragging the grip resizes the whole thing as a unit rather than just
   // reflowing text. Default width is a third of the viewport.
+  //
+  // The look follows the app's brand system (templates/index.html): chalk on
+  // ink, Space Grotesk, card radius 24 / controls 14 / pills full -- and green
+  // only on the dart that finishes a route, so the one green thing in the
+  // panel is always the answer. The score, the buttons and the source chip
+  // therefore never use it.
 
   const POS_KEY     = "finishit.pos";
   const COL_KEY     = "finishit.collapsed";
@@ -272,6 +278,7 @@
   const AUTO_KEY    = "finishit.auto";
   const BASE_W   = 250;    // width the raw px sizes below were designed at
   const MIN_W    = 200;
+  const EDGE     = 8;      // gap a full-size panel keeps to the viewport edge
   let ui = null;
 
   const store = {
@@ -283,6 +290,38 @@
     },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   };
+
+  // Space Grotesk ships with the extension (fonts/, OFL). A @font-face inside
+  // a shadow root is ignored, and a url() to the extension can be refused by
+  // the page's font-src, so the files are fetched here and handed to the
+  // document as binary faces. Under a private family name, so a page that
+  // uses Space Grotesk itself is left alone. Until they land (or if they never
+  // do) the panel is drawn in the system face; every line height below is
+  // fixed, so the swap does not move anything.
+  const FONT_NAME  = "Finish IT Grotesk";
+  const FONT_FILES = [
+    ["fonts/SpaceGrotesk-latin.woff2",
+     "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329," +
+     "U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"],
+    ["fonts/SpaceGrotesk-latin-ext.woff2",      // player names: Ł, ř, ő ...
+     "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F," +
+     "U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"],
+  ];
+  let fontAsked = false;
+
+  function loadFont() {
+    if (fontAsked) return;
+    fontAsked = true;
+    for (const [file, unicodeRange] of FONT_FILES) {
+      let url;
+      try { url = chrome.runtime.getURL(file); } catch (e) { return; }   // extension reloaded
+      fetch(url)
+        .then(r => r.arrayBuffer())
+        .then(buf => new FontFace(FONT_NAME, buf, { weight: "300 700", unicodeRange }).load())
+        .then(face => document.fonts.add(face))
+        .catch(() => {});
+    }
+  }
 
   // AUTO follows the thrower; otherwise the pinned P1/P2 button wins.
   let autoMode        = store.get(AUTO_KEY, true);
@@ -298,149 +337,373 @@
     }).catch(() => { lastSyncedField = null; });
   }
 
+  // The name AUTO learned for a field, "" when it has none.
+  function nameFor(f) {
+    const map = store.get(PLAYERS_KEY, {});
+    for (const name of Object.keys(map || {})) if (map[name] === f) return name;
+    return "";
+  }
+
+  // A pressed button is the mode in force: AUTO, or the pinned field. The
+  // field in play is marked separately, so in AUTO you still see who it is
+  // following -- with the learned name next to it when there is one.
   function paintFields() {
     if (!ui) return;
     ui.root.querySelectorAll(".fields button").forEach(b => {
-      const isAuto = b.dataset.f === "auto";
-      b.classList.toggle("on",  isAuto ? autoMode : Number(b.dataset.f) === currentField);
-      b.classList.toggle("dim", !isAuto && autoMode);
+      const isAuto  = b.dataset.f === "auto";
+      const f       = Number(b.dataset.f);
+      const pressed = isAuto ? autoMode : !autoMode && f === currentField;
+      b.classList.toggle("on", pressed);
+      b.setAttribute("aria-pressed", String(pressed));
+      if (isAuto) return;
+      const inPlay = f === currentField;
+      const name   = nameFor(f);
+      b.classList.toggle("cur", inPlay);
+      b.querySelector(".who").textContent = inPlay ? name : "";
+      b.title = (name ? `${name} (P${f})` : `Player ${f}`) + (pressed ? " - pinned" : " - click to pin");
+      b.setAttribute("aria-label", name ? `Player ${f}, ${name}` : `Player ${f}`);
     });
   }
 
-  const maxW      = () => Math.max(MIN_W, window.innerWidth - 40);
-  const clampW    = w => Math.max(MIN_W, Math.min(maxW(), Math.round(w)));
-  const defaultW  = () => clampW(window.innerWidth / 3);
+  // Layout viewport, without a vertical scrollbar the panel would sit under.
+  const vw = () => Math.min(window.innerWidth, document.documentElement.clientWidth || Infinity);
+  const vh = () => window.innerHeight;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  // Height / width of the panel with everything in it (three ways). Measured
+  // once when the panel is built; because the whole panel scales with its
+  // width, this turns "must fit the viewport height" into a cap on the width.
+  let fullAspect = 1.1;
+
+  const maxW      = () => Math.max(MIN_W, Math.floor(Math.min(vw() - 2 * EDGE,
+                                                              (vh() - 2 * EDGE) / fullAspect)));
+  const clampW    = w => clamp(Math.round(w), MIN_W, maxW());
+  const defaultW  = () => clampW(vw() / 3);
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+  // One way as three cells. The finish is the last dart actually thrown: a
+  // double or the Bull earlier in the route (T15 D18 D20, Bull T19 D7) is a
+  // set-up shot and stays ink.
+  function wayHtml(way, cls, label) {
+    const darts = way.map(String);
+    let last = -1;
+    darts.forEach((t, i) => { if (t !== "NA") last = i; });
+    const said = darts.filter(t => t !== "NA").join(", ");
+    return `<div class="way ${cls}" role="group" aria-label="${esc(label)}: ${esc(said)}">` +
+      darts.map((t, i) => {
+        const isDouble = /^D/.test(t) || t === "Bull";
+        const c = "d" + (isDouble ? " dbl" : "") + (isDouble && i === last ? " fin" : "") +
+                  (t === "NA" ? " na" : "");
+        return `<span class="${c}">${t === "NA" ? "·" : esc(t)}</span>`;
+      }).join("") +
+      `</div>`;
+  }
+
+  const SOURCE_CHIP = {
+    live:    ["LIVE",    "Scores are read straight from this page"],
+    ocr:     ["OCR",     "No score from this page - the app is reading the screen"],
+    idle:    ["IDLE",    "The app has not read a score yet"],
+    offline: ["OFFLINE", "Finish IT app not reachable - showing the last score"],
+  };
 
   function buildOverlay() {
+    loadFont();
     const host = document.createElement("div");
     host.style.position = "fixed";
     host.style.zIndex   = "2147483647";
     const root = host.attachShadow({ mode: "open" });
+    const p = n => `calc(${n}px * var(--s))`;     // design px -> scaled px
     root.innerHTML = `
       <style>
-        :host, * { box-sizing: border-box; }
+        :host {
+          all: initial;
+          /* Brand tokens, dark set (templates/index.html). */
+          --surface:     rgba(11, 16, 22, .84);
+          --tile:        rgba(244, 241, 234, .07);
+          --ink:         #F4F1EA;
+          --ink-60:      rgba(244, 241, 234, .62);
+          --ink-40:      rgba(244, 241, 234, .40);
+          --line:        rgba(244, 241, 234, .14);
+          --btn:         #F4F1EA;
+          --btn-ink:     #0F1720;
+          --finish:      #19D17F;   /* fills only: the dart that finishes */
+          --finish-ink:  #06281A;   /* text on a --finish fill */
+          --finish-text: #3DDC97;   /* green text on the dark surface, AA */
+          --live:        #FF5D52;   /* source chip only */
+          --ocr:         #F5B544;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+
         .panel {
           position: relative;
-          font-family: 'OCR A Extended', Consolas, monospace;
-          width: 100%;
-          background: rgba(10, 12, 16, 0.93);
-          border: 1px solid #1f2937;
-          border-radius: calc(10px * var(--s));
-          color: #e5e7eb;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          overflow: hidden;
+          font-family: '${FONT_NAME}', 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+          font-variant-numeric: tabular-nums;
+          line-height: 1;
+          color: var(--ink);
+          background: var(--surface);
+          -webkit-backdrop-filter: blur(24px) saturate(1.2);
+          backdrop-filter: blur(24px) saturate(1.2);
+          border: 1px solid var(--line);
+          border-radius: ${p(24)};
+          box-shadow: 0 ${p(12)} ${p(36)} rgba(0, 0, 0, .45);
+          -webkit-font-smoothing: antialiased;
           user-select: none;
         }
+        button { font: inherit; margin: 0; }
+        button:focus-visible {
+          outline: ${p(2)} solid var(--ink);
+          outline-offset: ${p(2)};
+        }
+
+        /* -- bar: source chip, wordmark, fold. Also the drag handle. -- */
         .head {
-          display: flex; align-items: center; gap: calc(8px * var(--s));
-          padding: calc(7px * var(--s)) calc(10px * var(--s));
-          background: #111827;
-          cursor: grab;
-          border-bottom: 1px solid #1f2937;
+          display: flex; align-items: center; gap: ${p(8)};
+          height: ${p(40)};
+          padding: 0 ${p(6)} 0 ${p(12)};
+          cursor: grab; touch-action: none;
         }
         .head:active { cursor: grabbing; }
-        .dot {
-          width: calc(8px * var(--s)); height: calc(8px * var(--s));
-          border-radius: 50%; background: #6b7280; flex: none;
+        .chip {
+          flex: none; display: inline-flex; align-items: center; gap: ${p(5)};
+          height: ${p(18)}; padding: 0 ${p(8)} 0 ${p(6)};
+          border: 1px solid var(--line); border-radius: 999px;
+          font-size: ${p(9)}; font-weight: 700; letter-spacing: .1em;
+          color: var(--ink-60);
         }
-        .dot.push { background: #22c55e; }
-        .dot.ocr  { background: #f59e0b; }
+        .chip .dot {
+          width: ${p(6)}; height: ${p(6)}; border-radius: 50%;
+          background: var(--ink-40);
+        }
+        .chip[data-state="live"]          { color: var(--ink); }
+        .chip[data-state="live"] .dot     { background: var(--live); }
+        .chip[data-state="ocr"]           { color: var(--ocr); border-color: rgba(245, 181, 68, .4); }
+        .chip[data-state="ocr"] .dot      { background: var(--ocr); }
+        .chip[data-state="offline"] .dot  { background: none; border: ${p(1.5)} solid var(--ink-60); }
         .title {
-          font-size: calc(10px * var(--s)); letter-spacing: .12em;
-          text-transform: uppercase; color: #9ca3af; flex: 1;
-          white-space: nowrap; overflow: hidden;
+          flex: 1; min-width: 0;
+          font-size: ${p(10)}; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+          color: var(--ink-60);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .fields { display: flex; gap: calc(3px * var(--s)); }
-        .fields button {
-          font: inherit; font-size: calc(10px * var(--s));
-          padding: calc(2px * var(--s)) calc(7px * var(--s));
-          border-radius: calc(4px * var(--s)); cursor: pointer;
-          background: #1f2937; color: #9ca3af; border: 1px solid #374151;
+        .mini {
+          display: none; min-width: ${p(28)}; text-align: center;
+          font-size: ${p(22)}; font-weight: 700; letter-spacing: -.03em;
         }
-        .fields button.on { background: #2563eb; color: #fff; border-color: #2563eb; }
-        .fields button[data-f="auto"].on { background: #16a34a; border-color: #16a34a; }
-        .fields button.dim { opacity: .45; }
         .fold {
-          font-size: calc(13px * var(--s)); color: #6b7280;
-          cursor: pointer; padding: 0 calc(2px * var(--s));
+          position: relative; flex: none; display: grid; place-items: center;
+          width: ${p(28)}; height: ${p(28)}; padding: 0;
+          border: 0; border-radius: ${p(14)};
+          background: none; color: var(--ink-60); cursor: pointer;
         }
-        .body { padding: calc(10px * var(--s)); }
-        .panel.collapsed .body { display: none; }
-        .panel.collapsed .grip { display: none; }
+        /* The drawn control stays small; the target around it is 48 px. */
+        .fold::before { content: ""; position: absolute; inset: ${p(-11)}; }
+        .fold:hover { background: var(--tile); color: var(--ink); }
+        .fold svg {
+          width: ${p(14)}; height: ${p(14)};
+          fill: none; stroke: currentColor; stroke-width: 2;
+          stroke-linecap: round; stroke-linejoin: round;
+          transition: transform .18s ease;
+        }
+        .collapsed .fold svg { transform: rotate(180deg); }
+
+        /* -- player switch: one segmented control -- */
+        .fields {
+          display: flex; gap: ${p(2)};
+          height: ${p(34)}; margin: 0 ${p(12)}; padding: ${p(2)};
+          background: var(--tile); border: 1px solid var(--line);
+          border-radius: ${p(14)};
+        }
+        .fields button {
+          position: relative; flex: 1 1 0; min-width: ${p(48)};
+          display: flex; align-items: center; justify-content: center; gap: ${p(5)};
+          padding: 0 ${p(8)};
+          border: 0; border-radius: ${p(11)};
+          background: none; color: var(--ink-60); cursor: pointer;
+          font-size: ${p(10.5)}; font-weight: 700; letter-spacing: .08em;
+          white-space: nowrap;
+        }
+        /* 48 px tall target. It grows downwards, into the blank above the score,
+           so it never eats into the drag bar over it. */
+        .fields button::before { content: ""; position: absolute; inset: ${p(-3)} 0 ${p(-17)}; }
+        .fields button:hover { color: var(--ink); }
+        .fields button.cur { flex-grow: 1.9; color: var(--ink); background: rgba(244, 241, 234, .10); }
+        .fields button.on  { background: var(--btn); color: var(--btn-ink); }
+        .who {
+          min-width: 0; overflow: hidden; text-overflow: ellipsis;
+          font-weight: 600; letter-spacing: 0;
+        }
+        .who:empty { display: none; }
+
+        /* -- readout: the score is the hero -- */
+        .body { padding: ${p(8)} ${p(12)} ${p(12)}; text-align: center; }
         .score {
-          font-size: calc(40px * var(--s)); font-weight: 700; line-height: 1;
-          text-align: center; margin-bottom: calc(8px * var(--s));
+          height: ${p(68)};
+          font-size: ${p(68)}; font-weight: 700; line-height: 1; letter-spacing: -.04em;
         }
-        .score.easy { color: #22c55e; }
-        .score.mid  { color: #f59e0b; }
-        .score.big  { color: #a855f7; }
-        .score.dead { color: #ef4444; }
+        /* No finish on: same number, calm. Not an alarm. */
+        .score.dead, .mini.dead { color: var(--ink-60); font-weight: 500; }
+        .score.wait, .mini.wait { color: var(--ink-40); font-weight: 500; }
         .msg {
-          font-size: calc(11px * var(--s)); color: #9ca3af;
-          text-align: center; padding: calc(2px * var(--s)) 0 calc(4px * var(--s));
+          display: inline-flex; align-items: center;
+          height: ${p(24)}; margin-top: ${p(8)}; padding: 0 ${p(12)};
+          border-radius: 999px;
+          font-size: ${p(10)}; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+          color: var(--ink-60);
         }
-        .way { display: flex; gap: calc(5px * var(--s)); margin-top: calc(5px * var(--s)); }
-        .way.best .d { border-color: #22c55e; color: #d1fae5; }
-        .d {
-          flex: 1; text-align: center;
-          padding: calc(6px * var(--s)) 0;
-          font-size: calc(14px * var(--s)); font-weight: 700;
-          background: #0f172a; border: 1px solid #1f2937;
-          border-radius: calc(5px * var(--s));
+        .msg.dead { border: 1px solid var(--line); }
+        .msg:empty, .ways:empty { display: none; }
+
+        .ways { margin-top: ${p(10)}; }
+        .way { display: grid; grid-template-columns: repeat(3, 1fr); gap: ${p(6)}; }
+        .d { display: flex; align-items: center; justify-content: center; }
+
+        /* The best finish: three tiles, the finishing dart the one green fill. */
+        .way.best .d {
+          height: ${p(46)};
+          background: var(--tile); border: 1px solid var(--line);
+          border-radius: ${p(14)};
+          font-size: ${p(20)}; font-weight: 700; letter-spacing: -.01em;
         }
-        .d.dbl { background: #14532d33; }
+        .way.best .d.fin { background: var(--finish); border-color: var(--finish); color: var(--finish-ink); }
+        .way.best .d.na  { background: none; border-style: dashed; color: var(--ink-40); }
+
+        /* Alternatives: same three columns, no tiles, a size the eye skips. */
+        .way.alt { margin-top: ${p(2)}; }
+        .way.best + .way.alt { margin-top: ${p(8)}; }
+        .way.alt .d {
+          height: ${p(20)};
+          font-size: ${p(11.5)}; font-weight: 600; color: var(--ink-60);
+        }
+        .way.alt .d.fin { color: var(--finish-text); font-weight: 700; }
+        .way.alt .d.na  { color: var(--ink-40); }
+
+        /* -- resize grip: an arc inside the corner, there when you reach for it -- */
         .grip {
-          position: absolute; right: 0; bottom: 0;
-          width: calc(16px * var(--s)); height: calc(16px * var(--s));
-          cursor: nwse-resize;
-          background: linear-gradient(135deg, transparent 50%, #374151 50%, #374151 60%,
-                      transparent 60%, transparent 72%, #374151 72%, #374151 82%, transparent 82%);
+          position: absolute; right: ${p(3)}; bottom: ${p(3)};
+          width: ${p(24)}; height: ${p(24)};
+          color: var(--ink-60); cursor: nwse-resize; touch-action: none;
+          opacity: 0; transition: opacity .15s ease;
+        }
+        .grip svg {
+          display: block; width: 100%; height: 100%;
+          fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+        }
+        .panel:hover .grip, .grip:active { opacity: 1; }
+        @media (hover: none) { .grip { opacity: .7; } }
+        @media (pointer: coarse) {
+          .grip::before { content: ""; position: absolute; inset: ${p(-24)} 0 0 ${p(-24)}; }
+        }
+
+        /* -- app not answering: the last frame stays, visibly stale -- */
+        .body, .fields, .mini { transition: opacity .2s ease; }
+        .offline .body, .offline .fields, .offline .mini { opacity: .38; }
+
+        /* -- collapsed: a pill with the score and the source, nothing else -- */
+        .collapsed { border-radius: 999px; }
+        .collapsed .title, .collapsed .fields, .collapsed .body, .collapsed .grip { display: none; }
+        .collapsed .head { gap: ${p(10)}; padding: 0 ${p(6)} 0 ${p(11)}; }
+        .collapsed .mini { display: block; }
+
+        /* -- motion: only when something actually changed -- */
+        @keyframes fi-in {
+          from { opacity: 0; transform: translateY(${p(6)}); }
+          to   { opacity: 1; transform: none; }
+        }
+        @keyframes fi-pulse {
+          from { box-shadow: 0 0 0 0 rgba(25, 209, 127, .55); }
+          to   { box-shadow: 0 0 0 ${p(10)} rgba(25, 209, 127, 0); }
+        }
+        .score.tick, .mini.tick { animation: fi-in .18s cubic-bezier(.2, .7, .2, 1); }
+        .way.fresh .d           { animation: fi-in .18s cubic-bezier(.2, .7, .2, 1); }
+        .way.pulse .d.fin       { animation: fi-in .18s cubic-bezier(.2, .7, .2, 1),
+                                             fi-pulse .7s .12s ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after { animation: none !important; transition: none !important; }
         }
       </style>
-      <div class="panel">
+      <div class="panel" role="region" aria-label="Finish IT checkout">
         <div class="head">
-          <span class="dot"></span>
+          <span class="chip" data-state="idle"><i class="dot"></i><span class="chip-t">IDLE</span></span>
           <span class="title">Finish IT</span>
-          <span class="fields">
-            <button data-f="auto" title="follow whoever is at the throw (double-click to forget players)">AUTO</button
-            ><button data-f="1">P1</button><button data-f="2">P2</button>
-          </span>
-          <span class="fold">&ndash;</span>
+          <span class="mini wait" aria-live="polite" aria-atomic="true">&mdash;</span>
+          <button class="fold" type="button" aria-expanded="true">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg>
+          </button>
+        </div>
+        <div class="fields" role="group" aria-label="Player">
+          <button type="button" data-f="auto" aria-pressed="false"
+                  title="Follow whoever is at the throw (double-click to forget players)">AUTO</button>
+          <button type="button" data-f="1" aria-pressed="false"><span>P1</span><span class="who"></span></button>
+          <button type="button" data-f="2" aria-pressed="false"><span>P2</span><span class="who"></span></button>
         </div>
         <div class="body">
-          <div class="score">&mdash;</div>
+          <div class="score wait" aria-live="polite" aria-atomic="true">&mdash;</div>
           <div class="msg"></div>
           <div class="ways"></div>
         </div>
-        <div class="grip" title="drag to resize / double-click to reset"></div>
+        <div class="grip" title="Drag to resize, double-click to reset">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8.8A17 17 0 0 1 8.8 19"/></svg>
+        </div>
       </div>`;
     document.documentElement.appendChild(host);
 
     const q = sel => root.querySelector(sel);
     const panel = q(".panel");
     const head  = q(".head");
+    const fold  = q(".fold");
     const grip  = q(".grip");
+    const collapsed = () => panel.classList.contains("collapsed");
+
+    // How tall the panel gets relative to its width, with every row filled.
+    host.style.width = BASE_W + "px";
+    host.style.setProperty("--s", "1");
+    q(".ways").innerHTML = wayHtml(["T20", "T20", "Bull"], "best", "") +
+                           wayHtml(["T20", "T20", "Bull"], "alt", "").repeat(2);
+    if (panel.offsetHeight > 0) fullAspect = panel.offsetHeight / BASE_W;
+    q(".ways").innerHTML = "";
+
+    // `pos` is where the open panel sits. `r` says it lives in the right half
+    // of the screen: folded there, the pill hangs off the panel's right edge
+    // rather than its left, so a panel parked in a corner folds into that
+    // corner and opens back out of it.
+    let width = clampW(store.get(SIZE_KEY, defaultW()));
+    let pos   = store.get(POS_KEY, null);
+    if (!pos || !isFinite(pos.x) || !isFinite(pos.y)) {
+      pos = { x: vw() - width - 24, y: 24, r: true };      // default: top-right corner
+    } else if (typeof pos.r !== "boolean") {
+      pos.r = pos.x + width / 2 > vw() / 2;                // saved by an older build
+    }
+
+    // The panel never leaves the viewport: what is stored is where the user
+    // put it, what is drawn is that position pulled back on screen.
+    function place() {
+      const r = host.getBoundingClientRect();
+      const x = collapsed() && pos.r ? pos.x + width - r.width : pos.x;
+      host.style.left = clamp(x,     0, Math.max(0, vw() - r.width))  + "px";
+      host.style.top  = clamp(pos.y, 0, Math.max(0, vh() - r.height)) + "px";
+    }
 
     // One knob drives the whole panel: width -> scale factor.
-    let width = clampW(store.get(SIZE_KEY, defaultW()));
     function applyWidth(w) {
       width = clampW(w);
-      host.style.width = width + "px";
+      host.style.width = collapsed() ? "" : width + "px";   // the pill wraps its content
       host.style.setProperty("--s", (width / BASE_W).toFixed(3));
+      place();
     }
-    applyWidth(width);
 
-    // Restore where the user last put it; default to the top-right corner.
-    const pos = store.get(POS_KEY, null);
-    const startX = pos ? pos.x : Math.max(0, window.innerWidth - width - 24);
-    const startY = pos ? pos.y : 24;
-    host.style.left = startX + "px";
-    host.style.top  = startY + "px";
-    if (store.get(COL_KEY, false)) panel.classList.add("collapsed");
+    function setCollapsed(on) {
+      panel.classList.toggle("collapsed", on);
+      fold.setAttribute("aria-expanded", String(!on));
+      fold.setAttribute("aria-label", on ? "Expand" : "Collapse");
+      fold.title = on ? "Expand" : "Collapse";
+      applyWidth(width);
+    }
+    setCollapsed(!!store.get(COL_KEY, false));
 
-    q(".fold").addEventListener("click", () => {
-      panel.classList.toggle("collapsed");
-      store.set(COL_KEY, panel.classList.contains("collapsed"));
+    fold.addEventListener("click", () => {
+      setCollapsed(!collapsed());
+      store.set(COL_KEY, collapsed());
     });
 
     root.querySelectorAll(".fields button").forEach(b => {
@@ -460,28 +723,39 @@
         b.addEventListener("dblclick", () => {
           store.set(PLAYERS_KEY, {});
           lastSyncedField = null;
+          paintFields();
           if (DEBUG) console.log("[Finish IT] player mapping cleared");
         });
       }
     });
 
-    // Drag the header to move.
+    // Drag the bar to move (the whole pill, when folded).
     let drag = null;
     head.addEventListener("pointerdown", e => {
-      if (e.target.tagName === "BUTTON" || e.target.classList.contains("fold")) return;
+      if (e.target.closest("button")) return;
       const r = host.getBoundingClientRect();
       drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
       head.setPointerCapture(e.pointerId);
     });
     head.addEventListener("pointermove", e => {
       if (!drag) return;
-      const x = Math.max(0, Math.min(window.innerWidth  - 60, e.clientX - drag.dx));
-      const y = Math.max(0, Math.min(window.innerHeight - 30, e.clientY - drag.dy));
-      host.style.left = x + "px";
-      host.style.top  = y + "px";
-      store.set(POS_KEY, { x, y });
+      const r = host.getBoundingClientRect();
+      const x = clamp(e.clientX - drag.dx, 0, Math.max(0, vw() - r.width));
+      const y = clamp(e.clientY - drag.dy, 0, Math.max(0, vh() - r.height));
+      pos = { x: collapsed() && pos.r ? x + r.width - width : x, y, r: pos.r };
+      place();
     });
-    head.addEventListener("pointerup", () => { drag = null; });
+    const drop = () => {
+      if (!drag) return;
+      drag = null;
+      // Settle which half it now lives in, without moving what is on screen.
+      const r = host.getBoundingClientRect();
+      const right = r.left + r.width / 2 > vw() / 2;
+      pos = { x: collapsed() && right ? r.right - width : r.left, y: r.top, r: right };
+      store.set(POS_KEY, pos);
+    };
+    head.addEventListener("pointerup", drop);
+    head.addEventListener("pointercancel", drop);
 
     // Drag the grip to resize; double-click it to snap back to a third.
     let sizing = null;
@@ -495,23 +769,33 @@
       applyWidth(sizing.w + (e.clientX - sizing.x));
       store.set(SIZE_KEY, width);
     });
-    grip.addEventListener("pointerup", () => { sizing = null; });
+    const release = () => { sizing = null; };
+    grip.addEventListener("pointerup", release);
+    grip.addEventListener("pointercancel", release);
     grip.addEventListener("dblclick", () => {
       applyWidth(defaultW());
       store.set(SIZE_KEY, width);
     });
 
-    // Keep it on screen and sensibly sized when the window changes.
-    window.addEventListener("resize", () => {
-      applyWidth(width);
-      const r = host.getBoundingClientRect();
-      const x = Math.max(0, Math.min(window.innerWidth  - 60, r.left));
-      const y = Math.max(0, Math.min(window.innerHeight - 30, r.top));
-      host.style.left = x + "px";
-      host.style.top  = y + "px";
-    });
+    // Keep it on screen and sensibly sized when the window changes ...
+    const onResize = () => applyWidth(width);
+    window.addEventListener("resize", onResize);
+    // ... and when the panel itself does: ways coming and going change its
+    // height, and the folded pill is as wide as its score (and gets a little
+    // wider when the font lands), which matters when it hangs off the right.
+    const watch = new ResizeObserver(place);
+    watch.observe(panel);
 
-    return { host, root, q };
+    return {
+      host, root, q,
+      remove() {
+        window.removeEventListener("resize", onResize);
+        watch.disconnect();
+        host.remove();
+      },
+      // what is on screen, so a frame only touches (and animates) what changed
+      score: undefined, ways: "", source: null, offline: false,
+    };
   }
 
   // Same colour bands the WLED ring uses, so page and light agree.
@@ -524,42 +808,98 @@
     return "easy";
   }
 
+  function paintChip() {
+    const state = ui.offline ? "offline"
+                : ui.source === "push" ? "live"
+                : ui.source === "ocr"  ? "ocr" : "idle";
+    const chip = ui.q(".chip");
+    chip.dataset.state = state;
+    chip.title = SOURCE_CHIP[state][1];
+    ui.q(".chip-t").textContent = SOURCE_CHIP[state][0];
+  }
+
+  function setOffline(on) {
+    if (!ui || ui.offline === on) return;
+    ui.offline = on;
+    ui.q(".panel").classList.toggle("offline", on);
+    paintChip();
+  }
+
+  // Restart a one-shot CSS animation on an element that may still carry it.
+  function replay(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
   let lastRender = "";
 
   function render(d) {
     if (!ui) ui = buildOverlay();
-    const sig = JSON.stringify([d.score, d.source, d.field, d.message, d.suggested_ways]);
+    setOffline(false);                // the app answered
+    const sig = JSON.stringify([d.score, d.source, d.field, d.message, d.suggested_ways,
+                                nameFor(d.field)]);
     if (sig === lastRender) return;   // nothing changed - leave the DOM alone
     lastRender = sig;
 
-    ui.q(".dot").className   = "dot " + (d.source || "");
-    ui.q(".score").className = "score " + band(d.score);
-    ui.q(".score").textContent = (d.score === null || d.score === undefined) ? "—" : d.score;
-    ui.q(".msg").textContent = d.message || (d.ok ? "" : "no score");
+    ui.source = d.source;
+    paintChip();
     currentField = d.field;
     paintFields();
 
-    const ways = (d.suggested_ways || []).slice(0, 3);
-    ui.q(".ways").innerHTML = ways.map((w, i) =>
-      `<div class="way${i === 0 ? " best" : ""}">` +
-      w.map(dart => {
-        const t = String(dart);
-        const isDouble = /^D/.test(t) || t === "Bull";
-        return `<span class="d${isDouble ? " dbl" : ""}">${t === "NA" ? "·" : t}</span>`;
-      }).join("") +
-      `</div>`
-    ).join("");
+    const none  = d.score === null || d.score === undefined;
+    const state = none ? "wait" : band(d.score);
+    const ways  = (d.suggested_ways || []).slice(0, 3);
+
+    // The score, in the panel and in the folded pill. It only moves when the
+    // number itself changed, and not on the very first frame.
+    const text = none ? "—" : String(d.score);
+    const moved = ui.score !== undefined && ui.score !== text;
+    for (const el of [ui.q(".score"), ui.q(".mini")]) {
+      const base = el.classList.contains("mini") ? "mini" : "score";
+      el.className = `${base} ${state}`;
+      if (el.textContent !== text) el.textContent = text;
+      if (moved) replay(el, "tick");
+    }
+    ui.score = text;
+
+    // One calm line where the finish would be, when there is none to show.
+    const msg = ui.q(".msg");
+    msg.className = "msg" + (none ? " wait" : state === "dead" ? " dead" : "");
+    msg.textContent = ways.length ? ""
+                    : none ? "Waiting for board"
+                    : state === "dead" ? "No finish"
+                    : (d.message || "");
+
+    // The ways are only rebuilt when they changed, so nothing replays because
+    // the source or the field flipped. A new best route slides in; one that
+    // appears where there was none also pulses once.
+    const key = JSON.stringify(ways);
+    if (key !== ui.ways) {
+      const fresh = ways.length ? " fresh" + (ui.ways === "[]" ? " pulse" : "") : "";
+      ui.q(".ways").innerHTML = ways.map((w, i) => i === 0
+        ? wayHtml(w, "best" + fresh, "Best finish")
+        : wayHtml(w, "alt", "Alternative")).join("");
+      ui.ways = key;
+    }
   }
+
+  let misses = 0;                     // polls in a row the app did not answer
 
   async function refreshFinishes() {
     // Nothing picked on this site (or the pick was just reset): no panel.
     if (!configured()) {
-      if (ui) { ui.host.remove(); ui = null; lastRender = ""; }
+      if (ui) { ui.remove(); ui = null; lastRender = ""; }
       return;
     }
     try {
       render(await fetch(APP + "/api/outshot").then(r => r.json()));
-    } catch (e) { /* app down - keep the last frame on screen */ }
+      misses = 0;
+    } catch (e) {
+      // App down - keep the last frame on screen, marked as stale. One
+      // dropped poll is not an outage.
+      if (++misses >= 2) setOffline(true);
+    }
   }
 
   // -- Push loop -------------------------------------------------------------

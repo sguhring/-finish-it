@@ -102,7 +102,7 @@ Type a score and press **Calculate**. The best finish is on top with its double 
 2. Click the extension icon and press **Select score element**. Click player 1's score, then player 2's, or press **Enter** (or **Only one score**) when the page shows a single number. **Esc** cancels.
 3. Allow the extension on that site when Edge asks. It then comes back on every visit without another pick.
 
-From then on the remaining score reaches the app on every change. The popup shows where the score comes from (**extension** or **screen ocr**), what the pick reads, and a **Reset** that forgets the site. If the site changes its layout, the popup says **lost - select it again**.
+From then on the remaining score reaches the app on every change. The popup shows where the score comes from (**LIVE** for the extension, **OCR** for the screen reader), what the pick reads, and a **Reset** that forgets the site. If the site changes its layout, the popup says **Lost - select it again**.
 
 On `/live`, **Live** follows the game and **Type** takes a score by hand; **P1** and **P2** choose whose score to show. The overlay on the game page has the same switch plus **AUTO**, which follows whoever is at the throw, and it can be folded, moved and resized.
 

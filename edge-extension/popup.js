@@ -20,54 +20,75 @@ function band(v) {
   return "easy";
 }
 
-function renderWays(ways) {
-  $("ways").innerHTML = (ways || []).slice(0, 3).map((w, i) =>
-    `<div class="way${i === 0 ? " best" : ""}">` +
-    w.map(dart => {
-      const t = String(dart);
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+
+// The same readout the overlay draws: the best way as three tiles, the rest
+// as quiet rows under it. Only the dart that ends a route is green -- a
+// double or the Bull earlier in it is a set-up shot.
+function wayHtml(way, cls) {
+  const darts = way.map(String);
+  let last = -1;
+  darts.forEach((t, i) => { if (t !== "NA") last = i; });
+  return `<div class="way ${cls}">` +
+    darts.map((t, i) => {
       const isDouble = /^D/.test(t) || t === "Bull";
-      return `<span class="d${isDouble ? " dbl" : ""}">${t === "NA" ? "·" : t}</span>`;
+      const c = "d" + (isDouble ? " dbl" : "") + (isDouble && i === last ? " fin" : "") +
+                (t === "NA" ? " na" : "");
+      return `<span class="${c}">${t === "NA" ? "·" : esc(t)}</span>`;
     }).join("") +
-    `</div>`
-  ).join("");
+    `</div>`;
 }
 
-function clearFinish() {
-  $("score").textContent = "—";
-  $("score").className = "score";
-  $("msg").textContent = "";
-  $("ways").innerHTML = "";
+// Source chip: text as well as colour, the same four states as the overlay.
+const SOURCE_CHIP = { live: "LIVE", ocr: "OCR", idle: "IDLE", offline: "OFFLINE" };
+function setChip(state) {
+  $("src").dataset.state = state;
+  $("srcText").textContent = SOURCE_CHIP[state];
+}
+
+function renderFinish(d) {
+  const none  = d.score === null || d.score === undefined;
+  const state = none ? "wait" : band(d.score);
+  const ways  = (d.suggested_ways || []).slice(0, 3);
+
+  $("score").textContent = none ? "—" : d.score;
+  $("score").className = "score " + state;
+  $("msg").className = "msg" + (none ? " wait" : state === "dead" ? " dead" : "");
+  $("msg").textContent = ways.length ? ""
+                       : none ? "Waiting for board"
+                       : state === "dead" ? "No finish"
+                       : (d.message || "");
+  $("ways").innerHTML = ways.map((w, i) => wayHtml(w, i === 0 ? "best" : "alt")).join("");
 }
 
 async function refresh() {
   try {
     const d = await fetch(APP + "/api/outshot").then(r => r.json());
 
-    set("app", "running");
-    set("field", d.field === undefined ? "—" : String(d.field));
+    set("app", "Running");
+    set("field", d.field === undefined ? "—" : "P" + d.field);
+    $("readout").classList.remove("offline");
 
     if (d.source === "push") {
-      set("src", "extension", "");
+      setChip("live");
       $("hint").textContent = "Scores are coming from the page. No OCR in use.";
     } else if (d.source === "ocr") {
-      set("src", "screen ocr", "warn");
+      setChip("ocr");
       $("hint").textContent =
         "No push arriving. Open the game tab and check its console for [Finish IT] messages.";
     } else {
-      set("src", "none", "warn");
+      setChip("idle");
       $("hint").textContent = "No score read yet.";
     }
 
-    $("score").textContent = (d.score === null || d.score === undefined) ? "—" : d.score;
-    $("score").className = "score " + band(d.score);
-    $("msg").textContent = d.message || (d.ok ? "" : "no score");
-    renderWays(d.suggested_ways);
+    renderFinish(d);
 
   } catch (e) {
-    set("app", "not reachable", "bad");
-    set("src", "—", "bad");
+    // Same as the overlay: whatever was last read stays, visibly stale.
+    set("app", "Not reachable", "bad");
     set("field", "—");
-    clearFinish();
+    setChip("offline");
+    $("readout").classList.add("offline");
     $("hint").textContent = "Start it with:  python app.py";
   }
 }
@@ -96,8 +117,8 @@ async function refreshSite() {
   const isApp = web && tabUrl.port === "5000" && /^(127\.0\.0\.1|localhost)$/.test(tabUrl.hostname);
   set("site", web ? tabUrl.hostname : "—");
   $("pick").disabled = !web || isApp;
-  if (!web)  { siteState("not a web page", "warn"); return; }
-  if (isApp) { siteState("this is the app", ""); return; }
+  if (!web)  { siteState("Not a web page", "warn"); return; }
+  if (isApp) { siteState("This is the app", ""); return; }
 
   let st = null;
   try { st = await chrome.tabs.sendMessage(tab.id, { cmd: "status" }); } catch (e) {}
@@ -106,15 +127,15 @@ async function refreshSite() {
   $("selectors").textContent = st && st.selectors ? st.selectors.join("   |   ") : "";
 
   if (!st || !st.source) {
-    siteState("not set up", "warn");
+    siteState("Not set up", "warn");
   } else if (st.lost) {
-    siteState("lost - select it again", "bad");
+    siteState("Lost - select it again", "bad");
   } else if (st.read) {
     const r = st.read;
     const v = r.mode === "two-up" ? `${r.field1} / ${r.field2}` : String(r.field1);
-    siteState(`picked · reads ${v}`);
+    siteState(`Picked · reads ${v}`);
   } else {
-    siteState("picked");
+    siteState("Picked");
   }
 }
 

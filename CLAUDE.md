@@ -346,6 +346,32 @@ its score element (job 5). Then it does four jobs there:
    are mapped to fields in the order first seen and remembered in `localStorage`. Pinning P1 or
    P2 leaves AUTO (do that on a page where the largest text is a menu, not a name);
    double-clicking AUTO forgets the learned names.
+
+   The panel follows the brand system of `templates/index.html` (dark tokens, declared on
+   `:host` in the shadow root): the score is the hero and is always ink, the best way is three
+   tiles, the alternatives are quiet rows in the same three columns, and **green is only the
+   dart that finishes a route** — the last one thrown, so a set-up double or Bull earlier in
+   the way stays ink. A score with no checkout is the same number muted plus a "No finish"
+   pill, not a red number; no score is a dash and "Waiting for board". The source is a chip
+   with text (**LIVE** = push, **OCR** = fallback, **IDLE**, **OFFLINE**), so it does not rely
+   on colour. When `/api/outshot` stops answering (two polls in a row) the last frame stays,
+   dimmed, under the OFFLINE chip. Folded, it is a pill with the chip and the score.
+
+   Everything is sized in design px at `BASE_W` (250) times `--s`, written with the `p()`
+   helper in `buildOverlay()`. Drawn controls are smaller than 48 px at scale 1; their
+   `::before` extends the click target to 48 (the segments grow downwards so they do not eat
+   into the drag bar). `fullAspect` (height / width with three ways, measured when the panel is
+   built) caps the width so the whole panel fits the viewport height, and `place()` pulls the
+   stored position back on screen — what is stored is where the user put it, never the clamped
+   value. `render()` only touches what changed: the score animates when the number changes,
+   the ways are rebuilt (and slide in) when the ways change, and a best finish appearing where
+   there was none pulses once. All of it is off under `prefers-reduced-motion`.
+
+   **Space Grotesk is bundled** (`edge-extension/fonts/`, OFL, latin + latin-ext) and declared
+   in `web_accessible_resources`. The content script fetches the files and adds them to the
+   document as `FontFace` objects under a private family name, because a `@font-face` inside a
+   shadow root is ignored and a `url()` to the extension can be refused by a page's `font-src`.
+   The popup loads the same files with a plain `@font-face`.
 3. **Leg-end detection**: when either score reads 0 it POSTs `/api/leg_end` once, then re-arms
    only after a real remaining score is back — the 0 stands for several seconds, so without that
    latch every tick during it would fire again.
@@ -381,7 +407,8 @@ Both score filters accept **four** digits, not three, so a board set to 9999 for
 training drills is read rather than ignored.
 
 `popup.html` / `popup.js` show the same live status (app reachable, source, field, score, ways)
-from the extension's own origin.
+from the extension's own origin, with the same tokens, source chip and readout as the overlay —
+change the two together.
 
 Requires `host_permissions` for `127.0.0.1:5000` — that is what lets the content script's `fetch`
 bypass the page's CSP and CORS.
