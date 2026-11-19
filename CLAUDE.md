@@ -106,6 +106,13 @@ string columns (`T20`, `D16`, `Bull`, `NA`, …); functions return the notation 
 
 - `suggested_ways(V)` reorders/selects the "preferred" rows using the hand-tuned `_SUGGESTED_ROWS`
   index lookup table (and `_RETURN_ALL` for scores returned as-is).
+- `suggested_or_all(V)` is `suggested_ways(V)` with a fallback: the table has no entry for **149
+  and 170**, so `suggested_ways()` is empty there even though both finish. Where the suggested
+  list is the *only* list shown (`/api/outshot`, hence the extension overlay and popup, and
+  `/finishes`) the fallback returns `calculate_output(V)` as-is, so a finishable score never comes
+  back without a route. `/api/ways` deliberately still reports the raw `suggested` (empty for
+  those two): it also carries `alternatives`, and both pages take the first alternative as the
+  best finish themselves.
 - `na_double_double_finishes(V)`, `single_double_double_finishes(V)` are alternate finish views.
 - `print_solution(V)` reports impossible checkouts (e.g. 159, 162, 163, 169, >170, 1).
 

@@ -87,7 +87,7 @@ The capture scripts keep their own copy of the coordinates; keep them in step wi
 
 `calculate_output(V)` builds every combination of up to three darts (singles, doubles, trebles, outer and inner bull) that adds up to `V` and ends on a double or the bull, then filters out the routes no player would choose. Each route comes back as dart notation: `T20`, `S5`, `D16`, `Bull`, `SBull`.
 
-`suggested_ways(V)` orders those routes with a hand-curated table, `_SUGGESTED_ROWS`, so the common routes come first; the first one is the best finish on every page. `na_double_double_finishes(V)` and `single_double_double_finishes(V)` add two alternative shapes: two doubles (62 to 80), and a single followed by two doubles (97 and 102 to 120).
+`suggested_ways(V)` orders those routes with a hand-curated table, `_SUGGESTED_ROWS`, so the common routes come first; the first one is the best finish on every page. The table has no entry for 149 and 170; for those `suggested_or_all(V)` falls back to the routes `calculate_output(V)` returned, so `/api/outshot` and `/finishes` never show a finishable score without a route. `na_double_double_finishes(V)` and `single_double_double_finishes(V)` add two alternative shapes: two doubles (62 to 80), and a single followed by two doubles (97 and 102 to 120).
 
 Scores with no checkout are 1, 159, 162, 163, 165, 166, 168, 169 and everything above 170.
 

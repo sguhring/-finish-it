@@ -1090,6 +1090,26 @@ def suggested_ways(V, all_ways=None):
     return np.array([])
 
 
+def suggested_or_all(V, all_ways=None):
+    """suggested_ways(V), or every filtered route where the table has no row.
+
+    The lookup above does not cover every score that has a checkout: 149 and
+    170 are in neither _SUGGESTED_ROWS nor _RETURN_ALL, so suggested_ways()
+    comes back empty for them. Anything that shows *only* the suggested list
+    (/api/outshot and so the extension overlay and popup, /finishes) would then
+    show no route at all, or claim there is none. This is the rule the
+    calculator page applies on its own: no suggested row, take the rows
+    calculate_output() left, in its order. Kept out of suggested_ways() so the
+    hand-tuned table stays the only thing that function answers for.
+    """
+    if all_ways is None:
+        all_ways = calculate_output(V)
+    ways = suggested_ways(V, all_ways=all_ways)
+    if isinstance(ways, np.ndarray) and ways.size:
+        return ways
+    return all_ways
+
+
 # ---------------------------------------------------------------------------
 # Auxiliary finish helpers
 # ---------------------------------------------------------------------------
@@ -1180,7 +1200,7 @@ def _build_finish_table(min_score: int = 2, max_score: int = 170) -> list[dict]:
     rows = []
     for v in range(min_score, max_score + 1):
         all_np   = calculate_output(v)
-        sug_np   = suggested_ways(v, all_ways=all_np)
+        sug_np   = suggested_or_all(v, all_ways=all_np)
         na_dd_np = na_double_double_finishes(v, all_ways=all_np)
         rows.append({
             "score":     v,
@@ -1214,7 +1234,7 @@ def api_outshot():
                         "raw": raw, "updated_ts": ts, "source": src,
                         "field": fld})
 
-    ways  = suggested_ways(V)
+    ways  = suggested_or_all(V)
     na_dd = na_double_double_finishes(V)
     sdd   = single_double_double_finishes(V)
     return jsonify({
