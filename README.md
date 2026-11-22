@@ -144,6 +144,7 @@ A game at 9999 never ends, so every visit shows up as a drop in the remaining sc
 ```text
 app.py                 the Flask app: score reader, checkout maths, throw feed, API
 build_exe.py           builds dist\FinishIT.exe with PyInstaller
+export_finish_table.py writes every finish for 2–170 as one JSON file, for an app without the server
 requirements.txt       what the app and the build need
 edge-extension/        the Edge extension: content.js (pick, read, push, overlay), popup, background
 templates/             index.html (calculator), live.html, finishes.html, training.html

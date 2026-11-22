@@ -36,13 +36,17 @@ python test_led.py
 # the app with a real test. Pulls the script straight out of training.html.
 node test_training.js
 
+# Write the checkout table for the phone app (scores 2..170, the /api/ways payload
+# per score) -> flutter_application_1/assets/finish_table.json, or a path you pass
+python export_finish_table.py
+
 # CNN pipeline (NOTE: currently NOT used by app.py — see "OCR pipeline" below)
 python generate_data.py       # render synthetic training images -> training_data/
 python train.py               # train ScoreCNN -> darts_ocr.pth
 ```
 
 `test_training.js` is the one real test (run it with node; it needs nothing installed).
-There is otherwise no test runner, linter, or `requirements.txt`. `test_ocr.py`, `show_region.py`, and the
+There is otherwise no test runner or linter; `requirements.txt` lists the pip packages. `test_ocr.py`, `show_region.py`, and the
 `debug_*.png` / `ocr_debug*.png` files are manual OCR-calibration scratch (the PNGs are gitignored).
 
 ### Running as the exe
@@ -286,10 +290,12 @@ needs no schema change in `app.py`. Deliberately server-side rather than
     App Store path by itself — see the note below.
 
   > **App Store note.** The calculator needs the Flask server for its maths, and a store app
-  > cannot. The clean route is to bundle the finish table: `_build_finish_table()` already
-  > produces every list for 2–170, so the Flutter app can ship it as a JSON asset and work
-  > offline with no Python at all. A bare web-view wrapper around this page risks rejection under
-  > Apple's minimum-functionality guideline (4.2).
+  > cannot. The clean route is to bundle the finish table: `export_finish_table.py` writes it
+  > as one JSON file (about 100 KB) holding, for every score 2–170, exactly what
+  > `/api/ways/<score>` returns, so the Flutter app can ship it as an asset, render it the way
+  > `index.html` does and work offline with no Python at all. Re-run the script whenever the
+  > checkout maths or `_SUGGESTED_ROWS` change. A bare web-view wrapper around this page risks
+  > rejection under Apple's minimum-functionality guideline (4.2).
 - `GET/POST /live` → `templates/live.html`: the dark board follower. One big score, the best finish
   as three dart tiles, the remaining ways in collapsed folds, and a **Reader** fold with the OCR
   diagnostics (source, raw text, region preview). Two modes, remembered in `localStorage` under
