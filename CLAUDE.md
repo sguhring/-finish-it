@@ -25,6 +25,10 @@ python app.py
 # templates/, static/, templates_capture/; not Tesseract, not the extension.
 python build_exe.py
 
+# Check a built exe: starts dist/FinishIT.exe on port 5055 (no browser tab) and
+# compares its pages and checkout lists with app.py for every score 0..180.
+python test_exe.py
+
 # Capture template images (the primary OCR method — see below)
 python auto_capture.py        # automated: drives the browser via pyautogui, loops 0..501
 python capture_templates.py   # manual: live preview window, SPACE to capture each score
@@ -57,8 +61,17 @@ without the debug reloader and opens `/live` in the browser. `finishit.json` is 
 and read in script runs too (next to `app.py`); `build_exe.py` copies it into `dist/` if present.
 The LED light is **off unless `finishit.json` sets both `wled_enabled` and `wled_host`**, so no
 copy (exe or clone) ever POSTs to some IP on someone else's network, and no address is in the repo.
-`FINISHIT_PORT` / `FINISHIT_NO_BROWSER` exist only to smoke-test a build next to a running copy;
-the extension always talks to port 5000.
+`FINISHIT_PORT` / `FINISHIT_NO_BROWSER` exist only to smoke-test a build next to a running copy
+(`test_exe.py` uses them); the extension always talks to port 5000.
+
+GitHub builds the exe too: `.github/workflows/build-exe.yml` runs on a Windows runner on every
+push that touches what goes into it (`app.py`, `build_exe.py`, `test_exe.py`, `requirements.txt`,
+`templates/`, `static/`, `templates_capture/`), runs `test_exe.py` against the result and keeps
+`FinishIT.exe` for 7 days as the run's **FinishIT** artifact (Actions → the run → Artifacts;
+downloading needs a GitHub sign-in). No `finishit.json` exists there, so that build carries no
+machine settings. An exe can also be built on Linux with the Windows Python under Wine, but
+Ubuntu's Wine 9.0 needs Microsoft's `ucrtbase.dll` swapped in before numpy 2 will import; the
+Windows runner is the simpler route.
 
 ### External dependencies (not pip-managed here)
 - **Tesseract** is optional for `app.py`: looked up from `finishit.json`, then

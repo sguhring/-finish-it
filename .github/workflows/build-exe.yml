@@ -1,0 +1,55 @@
+name: Build FinishIT.exe
+
+# Builds the exe on a real Windows machine whenever something that goes into it
+# changes, starts it once to check it (test_exe.py), and keeps it for a week as
+# a download on the run's page: Actions -> the run -> Artifacts -> FinishIT.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - app.py
+      - build_exe.py
+      - test_exe.py
+      - requirements.txt
+      - templates/**
+      - static/**
+      - templates_capture/**
+      - .github/workflows/build-exe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install the app's packages and PyInstaller
+        run: python -m pip install -r requirements.txt
+
+      - name: Build dist\FinishIT.exe
+        run: python build_exe.py
+
+      - name: Start the exe and compare it with the source
+        run: python test_exe.py
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist\FinishIT.exe -Algorithm SHA256).Hash.ToLower()
+          "SHA-256 of FinishIT.exe: ``$hash``" >> $env:GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: FinishIT
+          path: dist/FinishIT.exe
+          retention-days: 7
+          if-no-files-found: error

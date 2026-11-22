@@ -85,7 +85,7 @@ Open <http://127.0.0.1:5000> for the calculator and <http://127.0.0.1:5000/live>
 
 **Tesseract** is optional. Install it from [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) if you want the second OCR try; the app finds it in `C:\Program Files\Tesseract-OCR` or on your `PATH`.
 
-**The exe**: `python build_exe.py` writes `dist\FinishIT.exe`, a single file with the pages and reference images inside. The extension is installed in Edge separately.
+**The exe**: `python build_exe.py` writes `dist\FinishIT.exe`, a single file with the pages and reference images inside. The extension is installed in Edge separately. GitHub builds the same exe whenever the app changes: open the **Actions** tab, pick the latest **Build FinishIT.exe** run and download **FinishIT** under **Artifacts** (you need to be signed in; builds are kept for 7 days).
 
 ## Usage
 
@@ -144,6 +144,7 @@ A game at 9999 never ends, so every visit shows up as a drop in the remaining sc
 ```text
 app.py                 the Flask app: score reader, checkout maths, throw feed, API
 build_exe.py           builds dist\FinishIT.exe with PyInstaller
+test_exe.py            starts a built exe on a spare port and compares it with app.py
 export_finish_table.py writes every finish for 2–170 as one JSON file, for an app without the server
 requirements.txt       what the app and the build need
 edge-extension/        the Edge extension: content.js (pick, read, push, overlay), popup, background
